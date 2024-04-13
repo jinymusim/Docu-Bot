@@ -11,7 +11,7 @@ Windows requires additional Visual C++ 2015 build tools to be installed.
 They are available on Microsoft website [Build Tools](https://visualstudio.microsoft.com/downloads/)
 
 ## How to Run
-To run clone this repository and install dependancies in following steps
+To run, clone this repository and install dependancies in following steps
 ```
 pip install torch --index-url https://download.pytorch.org/whl/cu121
 pip install  -r requirements.txt
