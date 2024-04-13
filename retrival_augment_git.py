@@ -9,6 +9,7 @@ import torch
 import json
 import git
 import subprocess
+import importlib.util
 
 import shutil
 
@@ -16,11 +17,14 @@ def supports_flash_attention():
     """Check if a GPU supports FlashAttention."""
     major, minor = torch.cuda.get_device_capability(0)
     
+    flash_attention = False if  importlib.util.find_spec('flash_attn') is None else True
+    
+    
     # Check if the GPU architecture is Ampere (SM 8.x) or newer (SM 9.x)
     is_sm8x = major == 8 and minor >= 0
     is_sm9x = major == 9 and minor >= 0
 
-    return is_sm8x or is_sm9x
+    return (is_sm8x or is_sm9x) and flash_attention
 
 class RetrivalAugment:
     
