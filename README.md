@@ -56,6 +56,9 @@ pip install  flash-attn --no-build-isolation
 
 ### Run With Large Language Model
 
+***IMPORTANT*** The model must be downloaded and loaded to ***RAM*** at original size of ***100GB***!  
+Make sure you have enough disk space and RAM.
+
 If the GPU contains enough onboard memory (>= 30GB), user can utilize Mixtral-8x7B model.  
 
 To start the app with Mixtral use the ***--use-mixtral=True*** argument
@@ -64,6 +67,4 @@ To start the app with Mixtral use the ***--use-mixtral=True*** argument
 python gradio_app_git_update.py --use-mixtral=True
 ```
 
-***IMPORTANT*** The model must be downloaded and loaded to ***RAM*** at original size of ***100GB***!
 
-Make sure you have enough disk space and RAM.
