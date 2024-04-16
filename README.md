@@ -20,7 +20,7 @@ Following models were selected as Default models for RAG.
 
 To change them, rewrite the default values in ***MODEL_TYPES.py***
 
-## Number of Retrived Files
+## Number of Retrieved Files
 
 The approximate number of files retrived durring Document Retrival is defined in ***CONTEXT_SIZE.py***.
 
