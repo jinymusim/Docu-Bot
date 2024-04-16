@@ -4,14 +4,17 @@ from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 from threading import Thread
 from zipfile import ZipFile
 import PROMPTS
+import MODEL_TYPES
+import CONTEXT_SIZE
 import os
 import torch
 import json
 import git
 import subprocess
 import importlib.util
-
+import argparse
 import shutil
+
 
 def supports_flash_attention():
     """Check if a GPU supports FlashAttention."""
@@ -28,9 +31,9 @@ def supports_flash_attention():
 
 class RetrivalAugment:
     
-    def __init__(self, cache_repo_list = os.path.join(os.path.dirname(__file__), 'cached_repos.json'), cache_dir= os.path.join(os.path.dirname(__file__), 'py_cache')) -> None:
+    def __init__(self, cache_repo_list = os.path.join(os.path.dirname(__file__), 'cached_repos.json'), cache_dir= os.path.join(os.path.dirname(__file__), 'py_cache'), args:argparse.Namespace = None) -> None:
         # Embedding Model to be Used in Document and Querry Embeddings
-        self.base_embedding_model = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2', 
+        self.base_embedding_model = HuggingFaceEmbeddings(model_name=MODEL_TYPES.DEFAULT_EMBED_MODEL, 
                                                           model_kwargs = {'device': 'cuda' if torch.cuda.is_available() else 'cpu'})
         
         self.cache_dir = cache_dir
@@ -45,11 +48,12 @@ class RetrivalAugment:
         else:
             self.cached = json.load(open(self.cache_repo_list, 'r'))
             
+        model_type = MODEL_TYPES.DEFAULT_LM_MODEL if args == None or not args.use_mixtral else MODEL_TYPES.MIXTRAL_MODEL
         
         # Sample device to be used by models
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # Load Language Model to be used in RAG
-        self.tokenizer  = AutoTokenizer.from_pretrained('mistralai/Mistral-7B-Instruct-v0.2')
+        self.tokenizer  = AutoTokenizer.from_pretrained(model_type)
         if torch.cuda.is_available():
             nf4_config = BitsAndBytesConfig(
                 load_in_4bit=True,
@@ -58,10 +62,10 @@ class RetrivalAugment:
                 bnb_4bit_compute_dtype=torch.bfloat16
             )
             # Load Attention based on GPU params
-            self.model  = AutoModelForCausalLM.from_pretrained('mistralai/Mistral-7B-Instruct-v0.2', quantization_config=nf4_config, device_map="auto", attn_implementation="flash_attention_2" if supports_flash_attention() else "sdpa" )
+            self.model  = AutoModelForCausalLM.from_pretrained(model_type, quantization_config=nf4_config, device_map="auto", attn_implementation="flash_attention_2" if supports_flash_attention() else "sdpa" )
             
         else:
-            self.model  = AutoModelForCausalLM.from_pretrained('mistralai/Mistral-7B-Instruct-v0.2',  device_map="auto").to(self.device)
+            self.model  = AutoModelForCausalLM.from_pretrained(model_type,  device_map="auto").to(self.device)
         # Template variable for shared documents that could be uploaded
         self.shared_documents = {}
         # Load Cached Embeddings from cache list
@@ -204,7 +208,7 @@ class RetrivalAugment:
         result_string = "### Most Relevant Documents"
         for version in versions:
             relevant_docs = (self.version_specific_documents[git_repo][version]).relevant_docs_filename(inputs, 
-                                                                                                        k=max(1, 5//len(versions)), fetch_k=max(1, 30//len(versions)))
+                                                                                                        k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
             full_paths = []
             for path in relevant_docs:
                 _, filename = os.path.split(path)
@@ -226,12 +230,12 @@ class RetrivalAugment:
         version_context = []
         for version in versions:
             version_context += self.version_specific_documents[git_repo][version](inputs, 
-                                                                                  k=max(1, 5//len(versions)), fetch_k=max(1, 30//len(versions)))
+                                                                                  k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
          
         shared_context = []
         for share in shared:
             shared_context += self.shared_documents[share].querry_documents(f"{'' if (versions==None or len(versions) == 0)  else versions}\n{inputs}", 
-                                                                            k=max(1, 3//len(shared)), fetch_k=max(1, 20//len(shared)))
+                                                                            k=max(1, CONTEXT_SIZE.SHARED_DOCUMENTS//len(shared)), fetch_k=max(1, CONTEXT_SIZE.SHARED_DIVERSE_K//len(shared)))
         
         messages = [
             {

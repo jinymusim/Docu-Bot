@@ -11,14 +11,25 @@ from retrival_augment_git import RetrivalAugment
 from contextlib import redirect_stdout
 
 
+def parse_boolean(value):
+    value = value.lower()
+
+    if value in ["true", "yes", "y", "1", "t", 'True']:
+        return True
+    elif value in ["false", "no", "n", "0", "f", 'False']:
+        return False
+
+    return False
+
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument("--use-mixtral", default=False, type=parse_boolean, help='Use Mixtral model for generation')
 
 
 def main(args):
     
-    retrival_class =RetrivalAugment()
+    retrival_class =RetrivalAugment(args=args)
     retrival_class._add_following_repo_branches('https://github.com/dCache/dcache.git', ['9.2'])
     
     demo = gr.Blocks(title='Document Bot', theme=gr.themes.Default(primary_hue=gr.themes.colors.orange, secondary_hue=gr.themes.colors.blue) )
@@ -180,7 +191,7 @@ def main(args):
 
         
     with redirect_stdout(sys.stderr):
-        app, local, shared = demo.launch(share=True, debug=True)
+        app, local, shared = demo.launch(share=False, debug=True)
     
 
 if __name__ == "__main__":
