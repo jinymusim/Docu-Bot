@@ -29,7 +29,7 @@ The approximate number of files retrived durring Document Retrival is defined in
 - ***SHARED_DOCUMENTS*** defines approximate number of documents that will be taken from all requested zips
 - ***SHARED_DIVERSE_K*** is same as ***GIT_DIVERSE_K***
 
-These nunber can be altered. The selected values were observed to be good midleground in information correctness and size.
+These numbers can be altered. The selected values were observed to be good midleground in information correctness and size.
 
 ## How to Run
 To run, clone this repository and install dependancies in following steps
@@ -43,7 +43,7 @@ To run the solution, run python on script gradio_app_git_update.py
 ```
 python gradio_app_git_update.py
 ```
-This will produce a link to a frontedn UI where user can input questions.
+This will produce a link to a frontend UI where user can input questions.
 
 
 ### GPU acceleration
