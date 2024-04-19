@@ -35,9 +35,15 @@ def main(args):
     demo = gr.Blocks(title='Document Bot', theme=gr.themes.Default(primary_hue=gr.themes.colors.orange, secondary_hue=gr.themes.colors.blue) )
     callback = gr.CSVLogger()
     
-    def changed_repo(repo):
-        choices = retrival_class._check_branch_cache(repo)
-        return gr.update(choices=choices, value=choices[-1]) 
+    def get_good_branches(git_repos: list[str]):
+        branches = []
+        for repo in git_repos:
+            branches.append(retrival_class._check_branch_cache(repo)[-1])
+        return branches
+    
+    def changed_repo(repos):
+        choices = get_good_branches(repos)
+        return gr.update(choices=choices, value=choices) 
     
     def selected_repo(repo):
         choices = retrival_class._get_repo_branches(repo)
@@ -61,6 +67,8 @@ def main(args):
     def update_shared():
         return gr.update(choices=retrival_class._get_cached_shared(), 
                             value=[], interactive=True)
+        
+    
     
     with demo:
         gr.Markdown(
@@ -101,9 +109,10 @@ def main(args):
             
             with gr.Column():
                 git_box = gr.Dropdown( choices=retrival_class._get_cached_repos(), label='Git Repos', 
-                                      value=retrival_class._get_cached_repos()[-1], interactive=True, visible=False)
-                version_box = gr.Dropdown(choices=retrival_class._check_branch_cache(retrival_class._get_cached_repos()[-1]), label='Branches', 
-                                          value=retrival_class._check_branch_cache(retrival_class._get_cached_repos()[-1])[-1], interactive=True, multiselect=True, visible=False)
+                                      value=retrival_class._get_cached_repos()[-1], interactive=True, visible=False, 
+                                      multiselect=True)
+                version_box = gr.Dropdown(choices=retrival_class._check_branch_cache([retrival_class._get_cached_repos()[-1]]), label='Branches', 
+                                          value=get_good_branches([retrival_class._get_cached_repos()[-1]]), interactive=True, multiselect=True, visible=False)
                 shared_box = gr.Dropdown(choices=retrival_class._get_cached_shared(), interactive=True, visible=False, multiselect=True, label='Additional Files')
                 
                 question_box = gr.Textbox(label='Question about documents', lines=12, interactive=True, visible=False)

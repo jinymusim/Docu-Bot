@@ -2,7 +2,7 @@ from embeddings_dataset_langchain import EmbeddingsDataset
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer, TextIteratorStreamer
 from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 from threading import Thread
-from zipfile import ZipFile
+from zipfile import ZipFile, BadZipFile
 import PROMPTS
 import MODEL_TYPES
 import CONTEXT_SIZE
@@ -113,14 +113,24 @@ class RetrivalAugment:
         # Return all caches secondary directories
         return list(self.cached['cached_shared'])
       
-    def _check_branch_cache(self, base_repo: str):
-        # Return all cached branches to given repo
-        if not base_repo.endswith('.git'):
-            return []
-        if base_repo in self.cached['cached_repos'].keys():
-            return self.cached['cached_repos'][base_repo]
-        else:
-            return []
+    def _check_branch_cache(self, base_repos: list[str]):
+        # Return all cached branches to given repos
+        if not isinstance(base_repos, list):
+            _, repo_rel_name = os.path.split(base_repos.removesuffix('.git'))
+            repo_dir = os.path.dirname(base_repos)
+            _, repo_rel_dir =  os.path.split(repo_dir)
+            
+            return list(map(lambda x: f'{repo_rel_dir}/{repo_rel_name}/{x}', self.cached['cached_repos'][base_repos])) 
+        cache_branches = []
+        for repo in base_repos:
+
+            _, repo_rel_name = os.path.split(repo.removesuffix('.git'))
+            repo_dir = os.path.dirname(repo)
+            _, repo_rel_dir =  os.path.split(repo_dir)
+            
+            if repo in self.cached['cached_repos'].keys():
+                cache_branches += list(map(lambda x: f'{repo_rel_dir}/{repo_rel_name}/{x}', self.cached['cached_repos'][repo])) 
+        return cache_branches
             
     def _add_following_repo_branches(self, base_repo:str, repo_branches: list[str]):
         if not base_repo.endswith('.git'):
@@ -138,7 +148,14 @@ class RetrivalAugment:
                                                                                       cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed'), 
                                                                                       transformer_model=self.base_embedding_model)
             else:
+                # Try also https://code.it4i.cz/sccs/docs.it4i.cz/-/archive/master/docs.it4i.cz-master.zip
                 subprocess.run(f'curl -L -o {os.path.abspath(os.path.join(self.cache_dir , requested_branch + ".zip"))} {normalized_github_path}/zipball/{requested_branch}', shell=True)
+                try:
+                    zf = ZipFile(os.path.join(self.cache_dir , f'{requested_branch}.zip'), 'r') 
+                except BadZipFile as e:
+                    os.remove(os.path.join(self.cache_dir , f'{requested_branch}.zip'))
+                    subprocess.run(f'curl -L -o {os.path.abspath(os.path.join(self.cache_dir , requested_branch + ".zip"))} {normalized_github_path}/-/archive/{requested_branch}/zipfile.zip', shell=True)
+                
                 if os.path.exists(os.path.join(self.cache_dir , f'{requested_branch}.zip')):
                     try:
                         zf = ZipFile(os.path.join(self.cache_dir , f'{requested_branch}.zip'), 'r') 
@@ -204,33 +221,49 @@ class RetrivalAugment:
                 
         json.dump(self.cached, open(self.cache_repo_list, 'w+'), indent=6)
         
-    def _get_relevant_docs(self, git_repo, versions, inputs):
+    def _get_relevant_docs(self, git_repos: list[str], versions: list[str], inputs):
         result_string = "### Most Relevant Documents"
-        for version in versions:
-            relevant_docs = (self.version_specific_documents[git_repo][version]).relevant_docs_filename(inputs, 
-                                                                                                        k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
-            full_paths = []
-            for path in relevant_docs:
-                _, filename = os.path.split(path)
-                rel_file_path:str = path.split(version)[-1].replace(os.sep, '/')
-                rel_file_path_norm = rel_file_path.removeprefix('/')
-                repo_name = git_repo.removesuffix('.git')
-                full_paths.append(f'[{rel_file_path_norm}]({repo_name}/blob/{version}{rel_file_path})' )
-            full_paths = sorted(full_paths)
-            result_string += f'\n #### Branch {version} \n' + '  \n'.join(full_paths)
+        for repo in git_repos:
+            
+            _, repo_rel_name = os.path.split(repo.removesuffix('.git'))
+            repo_dir = os.path.dirname(repo)
+            _, repo_rel_dir =  os.path.split(repo_dir)
+            
+            for version in versions:
+                if f"{repo_rel_dir}/{repo_rel_name}" in version:
+                    _, true_ver = os.path.split(version)    
+                    relevant_docs = (self.version_specific_documents[repo][true_ver]).relevant_docs_filename(inputs, 
+                                                                                                                k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
+                    full_paths = []
+                    for path in relevant_docs:
+                        
+                        rel_file_path:str = path.split(true_ver)[-1].replace(os.sep, '/')
+                        rel_file_path_norm = rel_file_path.removeprefix('/')
+                        repo_name = repo.removesuffix('.git')
+                        full_paths.append(f'[{rel_file_path_norm}]({repo_name}/blob/{true_ver}{rel_file_path})' )
+                    full_paths = sorted(full_paths)
+                    result_string += f'\n #### Repo {version} \n' + '  \n'.join(full_paths)
             
         return result_string
                            
             
-    def __call__(self, git_repo, versions= None, inputs = '', shared=None):
+    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None):
         if len(self.version_specific_documents.keys()) == 0 and len(self.shared_documents.keys()) == 0:
             return 'I was not given any documents from which to answer.'
         
         streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
         version_context = []
-        for version in versions:
-            version_context += self.version_specific_documents[git_repo][version](inputs, 
-                                                                                  k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
+        for repo in git_repos:
+            
+            _, repo_rel_name = os.path.split(repo.removesuffix('.git'))
+            repo_dir = os.path.dirname(repo)
+            _, repo_rel_dir =  os.path.split(repo_dir)
+            
+            for version in versions:
+                if f"{repo_rel_dir}/{repo_rel_name}" in version:
+                    _, true_ver = os.path.split(version)
+                    version_context += self.version_specific_documents[repo][true_ver](inputs, 
+                                                    k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
          
         shared_context = []
         for share in shared:
