@@ -1,0 +1,30 @@
+
+
+Current Setting
+==============================================================================================================
+Answer the QUESTIONS below using the DOCUMENTS below as context. While Answering follow these steps:
+1. For each question/directive present in QUESTIONS:
+    1a. Select the most relevant information from the context.
+    1b. Generate short response with the information, with brevity in mind. Mention the filename of the used context.
+2. Remove duplicate content from the response.
+3. Generate your final response after adjusting it to increase accuracy and relevance.
+
+
+Branches {version} 
+DOCUMENTS: {version_context} {shared_context}
+QUESTIONS: {inputs}
+
+
+max_new_tokens=2048
+do_sample=True
+top_p=0.99
+top_k=500
+temperature=0.2
+num_beams=1
+
+GIT_DOCUMENTS = 5
+GIT_DIVERSE_K = 30
+
+SHARED_DOCUMENTS = 5
+SHARED_DIVERSE_K = 30
+==============================================================================================================

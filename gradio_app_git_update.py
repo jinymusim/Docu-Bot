@@ -2,7 +2,7 @@
 import os
 import sys
 os.environ['TOKENIZERS_PARALLELISM'] = 'true'
-
+import MODEL_TYPES
 
 import argparse
 import torch
@@ -72,9 +72,13 @@ def main(args):
     
     with demo:
         gr.Markdown(
-        """
+        f"""
         # Document Bot
         Problem analysis with Retrieval Augmented Generation.
+        
+        Used Embedding model: [{MODEL_TYPES.DEFAULT_EMBED_MODEL}](https://huggingface.co/{MODEL_TYPES.DEFAULT_EMBED_MODEL})
+        
+        Used LLM model: [{MODEL_TYPES.MIXTRAL_MODEL if args.use_mixtral else MODEL_TYPES.DEFAULT_LM_MODEL}](https://huggingface.co/{MODEL_TYPES.MIXTRAL_MODEL if args.use_mixtral else MODEL_TYPES.DEFAULT_LM_MODEL})
         """)
         
         # =================================================================== 
