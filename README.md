@@ -57,9 +57,9 @@ The user inputed API key will be used if inputed.
 To set company wide key, set eviromental variable OPENAI_API_KEY that will be utilized by the application.
 ```Windows
 # Windows
-$env:OPENAI_API_KEY
+$env:OPENAI_API_KEY=Company API key
 ```
 ```Linux
 # Linux
-export OPENAI_API_KEY
+export OPENAI_API_KEY=Company API key
 ```
