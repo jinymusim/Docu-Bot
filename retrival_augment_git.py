@@ -119,8 +119,9 @@ class RetrivalAugment:
             _, repo_rel_name = os.path.split(base_repos.removesuffix('.git'))
             repo_dir = os.path.dirname(base_repos)
             _, repo_rel_dir =  os.path.split(repo_dir)
-            
-            return list(map(lambda x: f'{repo_rel_dir}/{repo_rel_name}/{x}', self.cached['cached_repos'][base_repos])) 
+            if base_repos in self.cached['cached_repos'].keys():
+                return list(map(lambda x: f'{repo_rel_dir}/{repo_rel_name}/{x}', self.cached['cached_repos'][base_repos])) 
+            return []
         cache_branches = []
         for repo in base_repos:
 
