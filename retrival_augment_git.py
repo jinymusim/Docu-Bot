@@ -248,7 +248,7 @@ class RetrivalAugment:
         return result_string
                            
             
-    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None):
+    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None, temperature: float= 0.2):
         if len(self.version_specific_documents.keys()) == 0 and len(self.shared_documents.keys()) == 0:
             return 'I was not given any documents from which to answer.'
         
@@ -292,7 +292,7 @@ class RetrivalAugment:
             do_sample=True,
             top_p=0.99,
             top_k=500,
-            temperature=0.2,
+            temperature=temperature,
             num_beams=1,
         )
         t = Thread(target=self.model.generate, kwargs=generate_kwargs) 
