@@ -30,7 +30,6 @@ parser.add_argument("--use-mixtral", default=False, type=parse_boolean, help='Us
 def main(args):
     
     retrival_class =RetrivalAugment(args=args)
-    retrival_class._add_following_repo_branches('https://github.com/dCache/dcache.git', ['9.2'])
     
     demo = gr.Blocks(title='Document Bot', theme=gr.themes.Default(primary_hue=gr.themes.colors.orange, secondary_hue=gr.themes.colors.blue) )
     callback = gr.CSVLogger()
@@ -61,8 +60,11 @@ def main(args):
         
     
     def update_repo():
-        return gr.update(choices=retrival_class._get_cached_repos(), 
-                            value=retrival_class._get_cached_repos()[0], interactive=True)
+        cashed_repos = retrival_class._get_cached_repos()
+        if len(cashed_repos) == 0:
+            return gr.update(choices=[], value=[], interactive=True)
+        return gr.update(choices=cashed_repos, 
+                        value=cashed_repos[0], interactive=True)
         
     def update_shared():
         return gr.update(choices=retrival_class._get_cached_shared(), 
@@ -75,10 +77,6 @@ def main(args):
         f"""
         # Document Bot
         Problem analysis with Retrieval Augmented Generation.
-        
-        Embedding model: [{MODEL_TYPES.DEFAULT_EMBED_MODEL}](https://huggingface.co/{MODEL_TYPES.DEFAULT_EMBED_MODEL})
-        
-        LLM model: [{MODEL_TYPES.MIXTRAL_MODEL if args.use_mixtral else MODEL_TYPES.DEFAULT_LM_MODEL}](https://huggingface.co/{MODEL_TYPES.MIXTRAL_MODEL if args.use_mixtral else MODEL_TYPES.DEFAULT_LM_MODEL})
         """)
         
         # =================================================================== 
@@ -97,7 +95,6 @@ def main(args):
         git_submit_button.click(selected_repo, [git_update_box], [branch_update_box, branch_submit_button])
         
         
-        
         # ==================================================================================
         # Add Files Section
         file_add_box = gr.File(file_count='single', file_types=['file'], interactive=True, visible=False, label='Zip Uploader')
@@ -113,9 +110,11 @@ def main(args):
                 temperature_return_button = gr.Button('Return', variant='secondary', visible=False)
             with gr.Column():
                 temperature_reset_button = gr.Button('Reset', variant='primary', visible=False)
+        open_ai_model = gr.Dropdown(choices=MODEL_TYPES.LLM_MODELS, value=MODEL_TYPES.LLM_MODELS[0], label='OpenAI Model', visible=False, interactive=True)
+        open_ai_key = gr.Textbox(label='OpenAI API Key', visible=False, interactive=True, lines=1, max_lines=1)
                 
         ## Config Section UI controll
-        temperature_reset_button.click(lambda _: gr.update(value=0.2), [], [change_temperature])    
+        temperature_reset_button.click(lambda : gr.update(value=0.2), [], [change_temperature])    
         
                 
         # ==================================================================================
@@ -124,10 +123,12 @@ def main(args):
             
             with gr.Column():
                 git_box = gr.Dropdown( choices=retrival_class._get_cached_repos(), label='Git Repos', 
-                                      value=retrival_class._get_cached_repos()[-1], interactive=True, visible=False, 
-                                      multiselect=True)
-                version_box = gr.Dropdown(choices=retrival_class._check_branch_cache([retrival_class._get_cached_repos()[-1]]), label='Branches', 
-                                          value=get_good_branches([retrival_class._get_cached_repos()[-1]]), interactive=True, multiselect=True, visible=False)
+                                      value=[] if len(retrival_class._get_cached_repos()) == 0 else [retrival_class._get_cached_repos()[-1]], 
+                                      interactive=True, visible=False, multiselect=True)
+                version_box = gr.Dropdown(choices=[] if len(retrival_class._get_cached_repos()) == 0 else retrival_class._check_branch_cache([retrival_class._get_cached_repos()[-1]]), 
+                                          label='Branches', 
+                                          value=[] if len(retrival_class._get_cached_repos()) == 0 else get_good_branches([retrival_class._get_cached_repos()[-1]]), 
+                                          interactive=True, multiselect=True, visible=False)
                 shared_box = gr.Dropdown(choices=retrival_class._get_cached_shared(), interactive=True, visible=False, multiselect=True, label='Additional Files')
                 
                 question_box = gr.Textbox(label='Question about documents', lines=12, interactive=True, visible=False)
@@ -149,71 +150,75 @@ def main(args):
         
         branch_update_box.change(fn=changed_branches, inputs=[branch_update_box], outputs=[branch_submit_button])
         
-        submit_button.click(retrival_class.__call__, inputs=[git_box,version_box, question_box, shared_box, change_temperature], outputs=[answer_box]).then(
-            lambda *args: callback.flag(args), [version_box, git_box, submited_question_box, answer_box, shared_box], []
-            )
-        submit_button.click(retrival_class._get_relevant_docs, inputs=[git_box, version_box, question_box], outputs=[documents])
-        submit_button.click(lambda x: x, [question_box], [submited_question_box]).then(lambda _: gr.update(value=''), [],[question_box])
-        
-        add_repo.click(lambda _:11 * [gr.update(visible=False)], [], [config_button,shared_box,add_file ,git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents]).then(
-            fn=update_repo, inputs=[], outputs=[git_update_box]
+        submit_button.click(lambda x: x, [question_box], [submited_question_box]).then(
+            lambda : gr.update(value=''), [],[question_box]
         ).then(
-            lambda _: 3 * [gr.update(visible=True)], [], [git_update_box, git_submit_button, return_button]
+            retrival_class._get_relevant_docs, inputs=[git_box, version_box, submited_question_box, open_ai_key], outputs=[documents]
+        ).then(
+            retrival_class.__call__, inputs=[git_box,version_box, submited_question_box, shared_box, change_temperature, open_ai_key, open_ai_model], outputs=[answer_box]
+        ).then(
+            lambda *args: callback.flag(args), [version_box, git_box, submited_question_box, answer_box, shared_box, open_ai_model, change_temperature], []
         )
         
-        add_file.click(lambda _:11 * [gr.update(visible=False)], [], [config_button, shared_box, add_file ,git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents]).then(
-            lambda _: 2 * [gr.update(visible=True)], [], [file_add_box, file_return_button]
+        add_repo.click(lambda :11 * [gr.update(visible=False)], [], [config_button,shared_box,add_file ,git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents]).then(
+            fn=update_repo, inputs=None, outputs=[git_update_box]
+        ).then(
+            lambda : 3 * [gr.update(visible=True)], inputs=[], outputs=[git_update_box, git_submit_button, return_button]
         )
         
-        config_button.click(lambda _: 11 * [gr.update(visible=False)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]).then(
-            lambda _ : 3 * [gr.update(visible=True)], [], [change_temperature, temperature_return_button, temperature_reset_button]
+        add_file.click(lambda :11 * [gr.update(visible=False)], [], [config_button, shared_box, add_file ,git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents]).then(
+            lambda : 2 * [gr.update(visible=True)], [], [file_add_box, file_return_button]
+        )
+        
+        config_button.click(lambda : 11 * [gr.update(visible=False)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]).then(
+            lambda  : 5 * [gr.update(visible=True)], [], [open_ai_model, open_ai_key, change_temperature, temperature_return_button, temperature_reset_button]
         )
         # ==================================================================================
         # Returns
-        return_button.click(lambda _: 5* [gr.update(visible=False)], [], [git_update_box, git_submit_button, return_button, branch_submit_button, branch_update_box]).then(
+        return_button.click(lambda : 5* [gr.update(visible=False)], [], [git_update_box, git_submit_button, return_button, branch_submit_button, branch_update_box]).then(
             fn=update_repo, inputs=[], outputs=[git_box]   
         ).then(
-            lambda _:11* [gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
+            lambda :11* [gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
         )
         
-        file_return_button.click(lambda _: 2* [gr.update(visible=False)], [], [file_add_box, file_return_button]).then(
+        file_return_button.click(lambda : 2* [gr.update(visible=False)], [], [file_add_box, file_return_button]).then(
             fn=update_repo, inputs=[], outputs=[git_box]   
         ).then(
-            lambda _ : 11*[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
+            lambda  : 11*[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
         )
         
-        temperature_return_button.click(lambda _: 3*[gr.update(visible=False)], [], [change_temperature, temperature_return_button, temperature_reset_button]).then(
-            lambda _: 11*[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
+        temperature_return_button.click(lambda : 5*[gr.update(visible=False)], [], [open_ai_model, open_ai_key, change_temperature, temperature_return_button, temperature_reset_button]).then(
+            lambda : 11*[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
         )
         
         # ==================================================================================
         # Submits with Returns
         
-        branch_submit_button.click(lambda _: 3*[gr.update(interactive=False)], [], [git_submit_button, return_button, branch_submit_button]).then(
-            retrival_class._add_following_repo_branches, [git_update_box, branch_update_box], [] 
+        branch_submit_button.click(lambda : 3*[gr.update(interactive=False)], [], [git_submit_button, return_button, branch_submit_button]).then(
+            retrival_class._add_following_repo_branches, [git_update_box, branch_update_box, open_ai_key], [] 
         ).then(
-            lambda _: 5* [gr.update(visible=False,interactive=True)], [], [git_update_box, git_submit_button, return_button, branch_submit_button, branch_update_box]
+            lambda : 5* [gr.update(visible=False,interactive=True)], [], [git_update_box, git_submit_button, return_button, branch_submit_button, branch_update_box]
         ).then(
             fn=update_repo, inputs=[], outputs=[git_box]
         ).then(
             fn=changed_repo, inputs=[git_box], outputs=[version_box]
         ).then(
-            lambda _: 11 *[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
+            lambda : 11 *[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
         )
         
-        file_add_box.upload(lambda _: 2*[gr.update(interactive=False)], [], [file_add_box, file_return_button]).then(
-            retrival_class._add_following_zip, [file_add_box], []
+        file_add_box.upload(lambda : 2*[gr.update(interactive=False)], [], [file_add_box, file_return_button]).then(
+            retrival_class._add_following_zip, [file_add_box, open_ai_key], []
         ).then(
-            lambda _: 2* [gr.update(visible=False,interactive=True)], [], [file_add_box, file_return_button]
+            lambda : 2* [gr.update(visible=False,interactive=True)], [], [file_add_box, file_return_button]
         ).then(
             fn=update_shared, inputs=[], outputs=[shared_box]
         ).then(
-            lambda _: 11 *[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
+            lambda : 11 *[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
         )
         
         # ==================================================================================
         # Setup Section  
-        callback.setup([version_box, git_box, submited_question_box, answer_box, shared_box], "flagged_data_points_all")
+        callback.setup([version_box, git_box, submited_question_box, answer_box, shared_box, open_ai_model, change_temperature], "flagged_data_points_all")
 
         ## Setup section controll
         demo.load(fn=update_repo, inputs=[], outputs=[git_box]).then(
@@ -221,12 +226,12 @@ def main(args):
         ).then(
             fn=update_shared, inputs=[], outputs=[shared_box]
         ).then(
-            lambda _: 11 *[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
+            lambda : 11 *[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
         )
 
         
     with redirect_stdout(sys.stderr):
-        app, local, shared = demo.launch(share=False, server_name='0.0.0.0', server_port=7860)
+        app, local, shared = demo.launch(share=False, server_name='0.0.0.0', server_port=7860, debug=True)
     
 
 if __name__ == "__main__":

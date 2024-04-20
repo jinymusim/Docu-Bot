@@ -1,3 +1,4 @@
-DEFAULT_EMBED_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
-DEFAULT_LM_MODEL = 'mistralai/Mistral-7B-Instruct-v0.2'
-MIXTRAL_MODEL = 'mistralai/Mixtral-8x7B-Instruct-v0.1'
+DEFAULT_EMBED_MODEL = 'text-embedding-3-small'
+LLM_MODELS = [
+    'gpt-3.5-turbo', 'gpt-3.5-turbo-instruct', 'gpt-4-turbo', 'gpt-4-turbo-preview', 'gpt-4', 'gpt-4-32k' , 
+]

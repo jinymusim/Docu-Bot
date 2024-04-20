@@ -5,7 +5,7 @@ from langchain.document_loaders.text import TextLoader
 from langchain.docstore.document import Document
 from langchain.text_splitter import MarkdownTextSplitter, RecursiveCharacterTextSplitter, PythonCodeTextSplitter
 from langchain.vectorstores.chroma import Chroma
-from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
+from langchain_openai import  OpenAIEmbeddings
 from fuzzywuzzy import fuzz
 
 import os
@@ -33,7 +33,7 @@ EMBED_STEP = 2048
 #        return self.__call__(input)
 
 class EmbeddingsDataset(Dataset):
-    def __init__(self, datasource_directory, transformer_model: HuggingFaceEmbeddings, cache_dir =os.path.join(os.path.dirname(__file__), "chroma-embed-cache") ):
+    def __init__(self, datasource_directory, transformer_model: OpenAIEmbeddings, cache_dir =os.path.join(os.path.dirname(__file__), "chroma-embed-cache") ):
         self.cache_dir = os.path.join(os.path.dirname(__file__), cache_dir )
         self.embedd_function = transformer_model
         self.source_dir = datasource_directory
@@ -51,10 +51,10 @@ class EmbeddingsDataset(Dataset):
         if not exist:
         
             data_sources_splitter_pairs = [
-                ('*.md', MarkdownTextSplitter, {'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,}),
-                ('*.rst', MarkdownTextSplitter, {'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,}),
+                ('*.md', MarkdownTextSplitter, {'chunk_size' : 1000, 'chunk_overlap'  : 400, 'length_function' : len,}),
+                ('*.rst', MarkdownTextSplitter, {'chunk_size' : 1000, 'chunk_overlap'  : 400, 'length_function' : len,}),
                 #('*.md', SemanticChunker, self.embedd_function),
-                ('*.txt', RecursiveCharacterTextSplitter, {'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,}),
+                ('*.txt', RecursiveCharacterTextSplitter, {'chunk_size' : 1000, 'chunk_overlap'  : 400, 'length_function' : len,}),
                 #('*.py', PythonCodeTextSplitter, {'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,})
                 #('*.txt', SemanticChunker, self.embedd_function)
             ]
@@ -124,7 +124,7 @@ class EmbeddingsDataset(Dataset):
                 filepaths.append(doc.metadata['source'])
         return filepaths
     
-    def querry_documents(self, query, k=5, fetch_k=30):
+    def querry_documents(self, query, k=5, fetch_k=30):  
         documents = self.vectordb.max_marginal_relevance_search(query, k=k, fetch_k=fetch_k)
         docuemnt_filenames = []
         i=0
@@ -143,7 +143,7 @@ class EmbeddingsDataset(Dataset):
         
         return full_documents
     
-    def querry_documents_small(self, query, k=5, fetch_k=30):
+    def querry_documents_small(self, query, k=5, fetch_k=30): 
         documents = self.vectordb.max_marginal_relevance_search(query, k=k, fetch_k=fetch_k)
         full_documents = []
         for document in documents:

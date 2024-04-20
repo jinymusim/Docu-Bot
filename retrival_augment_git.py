@@ -1,6 +1,7 @@
 from embeddings_dataset_langchain import EmbeddingsDataset
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer, TextIteratorStreamer
-from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
+from langchain_openai import  OpenAIEmbeddings
+from openai import OpenAI
 from threading import Thread
 from zipfile import ZipFile, BadZipFile
 import PROMPTS
@@ -33,8 +34,6 @@ class RetrivalAugment:
     
     def __init__(self, cache_repo_list = os.path.join(os.path.dirname(__file__), 'cached_repos.json'), cache_dir= os.path.join(os.path.dirname(__file__), 'py_cache'), args:argparse.Namespace = None) -> None:
         # Embedding Model to be Used in Document and Querry Embeddings
-        self.base_embedding_model = HuggingFaceEmbeddings(model_name=MODEL_TYPES.DEFAULT_EMBED_MODEL, 
-                                                          model_kwargs = {'device': 'cuda' if torch.cuda.is_available() else 'cpu'})
         
         self.cache_dir = cache_dir
         os.makedirs(self.cache_dir, exist_ok=True)
@@ -48,31 +47,12 @@ class RetrivalAugment:
         else:
             self.cached = json.load(open(self.cache_repo_list, 'r'))
             
-        model_type = MODEL_TYPES.DEFAULT_LM_MODEL if args == None or not args.use_mixtral else MODEL_TYPES.MIXTRAL_MODEL
-        
-        # Sample device to be used by models
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # Load Language Model to be used in RAG
-        self.tokenizer  = AutoTokenizer.from_pretrained(model_type)
-        if torch.cuda.is_available():
-            nf4_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_compute_dtype=torch.bfloat16
-            )
-            # Load Attention based on GPU params
-            self.model  = AutoModelForCausalLM.from_pretrained(model_type, quantization_config=nf4_config, device_map="auto", attn_implementation="flash_attention_2" if supports_flash_attention() else "sdpa" )
-            
-        else:
-            self.model  = AutoModelForCausalLM.from_pretrained(model_type,  device_map="auto").to(self.device)
         # Template variable for shared documents that could be uploaded
         self.shared_documents = {}
-        # Load Cached Embeddings from cache list
         self.version_specific_documents = {}
-        self.__load_all_cached()
+        
     
-    def __load_all_cached(self):
+    def __load_all_cached(self, api_key:str):
         # Load each git repo
         for key in self.cached['cached_repos'].keys():
             # Embedding storage variable
@@ -83,12 +63,12 @@ class RetrivalAugment:
             for branch in self.cached['cached_repos'][key]:
                 self.version_specific_documents[key][branch] = EmbeddingsDataset(os.path.join(self.cache_dir ,repo_rel_name, branch), 
                                                                 cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{branch}-embed'), 
-                                                                transformer_model=self.base_embedding_model)
+                                                                transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
                 
         for zip_name in self.cached['cached_shared']:
             self.shared_documents[zip_name] = EmbeddingsDataset(os.path.join(self.cache_dir, zip_name.removesuffix('.zip')), 
                                                     cache_dir=os.path.join(self.cache_dir, f'{zip_name.removesuffix(".zip")}-embed'), 
-                                                    transformer_model=self.base_embedding_model)
+                                                    transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
       
     def _get_repo_branches(self, base_repo: str):
         # Check if proper git repo format
@@ -133,8 +113,12 @@ class RetrivalAugment:
                 cache_branches += list(map(lambda x: f'{repo_rel_dir}/{repo_rel_name}/{x}', self.cached['cached_repos'][repo])) 
         return cache_branches
             
-    def _add_following_repo_branches(self, base_repo:str, repo_branches: list[str]):
+    def _add_following_repo_branches(self, base_repo:str, repo_branches: list[str], api_key:str = None):
         if not base_repo.endswith('.git'):
+            return
+        if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
+            api_key = os.getenv('OPENAI_API_KEY')
+        elif api_key.strip() == '':
             return
         normalized_github_path = base_repo.removesuffix('.git')
         _ ,repo_rel_name = os.path.split(normalized_github_path)
@@ -147,7 +131,7 @@ class RetrivalAugment:
                 if not requested_branch in self.version_specific_documents[base_repo].keys():
                     self.version_specific_documents[base_repo][requested_branch] = EmbeddingsDataset(os.path.join(self.cache_dir , repo_rel_name, requested_branch), 
                                                                                       cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed'), 
-                                                                                      transformer_model=self.base_embedding_model)
+                                                                                      transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
             else:
                 # Try also https://code.it4i.cz/sccs/docs.it4i.cz/-/archive/master/docs.it4i.cz-master.zip
                 subprocess.run(f'curl -L -o {os.path.abspath(os.path.join(self.cache_dir , requested_branch + ".zip"))} {normalized_github_path}/zipball/{requested_branch}', shell=True)
@@ -175,7 +159,7 @@ class RetrivalAugment:
                         
                         self.version_specific_documents[base_repo][requested_branch] = EmbeddingsDataset(os.path.join(self.cache_dir , repo_rel_name, requested_branch), 
                                                                                           cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed'), 
-                                                                                          transformer_model=self.base_embedding_model)
+                                                                                          transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
                         self.cached['cached_repos'][base_repo].append(requested_branch)
                         zf.close()
                         os.remove(os.path.join(self.cache_dir , f'{requested_branch}.zip'))
@@ -189,7 +173,11 @@ class RetrivalAugment:
         
         json.dump(self.cached, open(self.cache_repo_list, 'w+'), indent=6)
         
-    def _add_following_zip(self, zip_info:str):
+    def _add_following_zip(self, zip_info:str, api_key:str = None):
+        if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
+            api_key = os.getenv('OPENAI_API_KEY')
+        elif api_key.strip() == '':
+            return
         _, zip_name = os.path.split(zip_info)
         if not zip_name.endswith('.zip') or zip_name in self.cached['cached_shared']:
             os.remove(zip_info)
@@ -212,7 +200,7 @@ class RetrivalAugment:
                     
                 self.shared_documents[zip_name] = EmbeddingsDataset(os.path.join(self.cache_dir , zip_name.removesuffix('.zip')), 
                                                     cache_dir=os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed'), 
-                                                    transformer_model=self.base_embedding_model)
+                                                    transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
                 self.cached['cached_shared'].append(zip_name)
                 zf.close()
                 os.remove(os.path.join(self.cache_dir , zip_name))   
@@ -222,7 +210,14 @@ class RetrivalAugment:
                 
         json.dump(self.cached, open(self.cache_repo_list, 'w+'), indent=6)
         
-    def _get_relevant_docs(self, git_repos: list[str], versions: list[str], inputs):
+    def _get_relevant_docs(self, git_repos: list[str], versions: list[str], inputs, api_key:str = None) -> str:
+        if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
+            api_key = os.getenv('OPENAI_API_KEY')
+        elif api_key.strip() == '':
+            return "No API Key Provided"
+        
+        self.__load_all_cached(api_key=api_key)
+        
         result_string = "### Most Relevant Documents"
         for repo in git_repos:
             
@@ -234,7 +229,8 @@ class RetrivalAugment:
                 if f"{repo_rel_dir}/{repo_rel_name}" in version:
                     _, true_ver = os.path.split(version)    
                     relevant_docs = (self.version_specific_documents[repo][true_ver]).relevant_docs_filename(inputs, 
-                                                                                                                k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
+                                                                                                                k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), 
+                                                                                                                fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
                     full_paths = []
                     for path in relevant_docs:
                         
@@ -248,11 +244,21 @@ class RetrivalAugment:
         return result_string
                            
             
-    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None, temperature: float= 0.2):
+    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None, temperature: float= 0.2, api_key:str = None, model:str = 'gpt-3.5-turbo'):
         if len(self.version_specific_documents.keys()) == 0 and len(self.shared_documents.keys()) == 0:
-            return 'I was not given any documents from which to answer.'
+            yield 'I am not loaded with any documents. This could be because I was not given any documents or I was not given an API Key.'
+            return
+        if len(git_repos) == 0 and len(shared) == 0:
+            yield 'I was not given any documentation path to work from.'
+            return
         
-        streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
+        if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
+            api_key = os.getenv('OPENAI_API_KEY')
+        elif api_key.strip() == '':
+            yield "No API Key Provided"
+            return
+        
+        
         version_context = []
         for repo in git_repos:
             
@@ -264,47 +270,38 @@ class RetrivalAugment:
                 if f"{repo_rel_dir}/{repo_rel_name}" in version:
                     _, true_ver = os.path.split(version)
                     version_context += self.version_specific_documents[repo][true_ver](inputs, 
-                                                    k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
+                                                    k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), 
+                                                    fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
          
         shared_context = []
         for share in shared:
             shared_context += self.shared_documents[share].querry_documents(f"{'' if (versions==None or len(versions) == 0)  else versions}\n{inputs}", 
-                                                                            k=max(1, CONTEXT_SIZE.SHARED_DOCUMENTS//len(shared)), fetch_k=max(1, CONTEXT_SIZE.SHARED_DIVERSE_K//len(shared)))
-        
+                                                                            k=max(1, CONTEXT_SIZE.SHARED_DOCUMENTS//len(shared)), 
+                                                                            fetch_k=max(1, CONTEXT_SIZE.SHARED_DIVERSE_K//len(shared)))      
         messages = [
             {
-                "role": "user",
-                "content": PROMPTS.SYSTEM_PROMPT_FAST + PROMPTS.INPUT_PROMPT_FAST.format(version=versions, 
-                                                                               version_context=version_context, 
-                                                                               shared_context=shared_context, 
-                                                                               inputs=inputs)
+                'role' : 'system',
+                'content' : PROMPTS.SYSTEM_PROMPT_FAST
             },
-
-        ]
-        
-        
-            
-        chatted = self.tokenizer.apply_chat_template(messages, return_tensors="pt", return_dict=True).to(self.device)
-        generate_kwargs = dict(
-            chatted,
-            streamer=streamer,
-            max_new_tokens=2048,
-            do_sample=True,
-            top_p=0.99,
-            top_k=500,
-            temperature=temperature,
-            num_beams=1,
+            {
+                "role": "user",
+                "content":  PROMPTS.INPUT_PROMPT_FAST.format(version=versions, 
+                                                            version_context=version_context, 
+                                                            shared_context=shared_context, 
+                                                            inputs=inputs)
+            },
+        ] 
+        open_api = OpenAI(api_key=api_key)
+        completion = open_api.chat.completions.create(
+            model=model,
+            messages=messages,
+            stream=True,
+            temperature=temperature
         )
-        t = Thread(target=self.model.generate, kwargs=generate_kwargs) 
-        t.start()
+        
         partial_message = ""
-        for new_token in streamer:
-            partial_message += new_token
+        for chunk in completion:
+            partial_message += chunk.choices[0].delta.content if chunk.choices[0].delta.content != None else ''
             yield partial_message
 
     
-if __name__ == '__main__':
-    augment = RetrivalAugment()
-    augment._add_following_repo_branches('https://github.com/jinymusim/GPT-Czech-Poet.git', ['main'])
-    print(augment._get_cached_repos())
-    print(augment._check_branch_cache('https://github.com/jinymusim/GPT-Czech-Poet.git'))

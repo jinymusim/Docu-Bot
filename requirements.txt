@@ -10,3 +10,5 @@ packaging
 wheel
 ninja
 GitPython
+langchain_openai
+openai
