@@ -35,15 +35,10 @@ def main(args):
     callback = gr.CSVLogger()
     
     def get_good_branches(git_repos: list[str]):
-        all_branches = retrival_class._check_branch_cache(git_repos)
-        good_branches = []
+        branches = []
         for repo in git_repos:
-            for branch in all_branches:
-                tail_b, _ = os.path.split(branch)
-                if tail_b in repo:
-                    good_branches.append(branch)
-                    break
-        return good_branches
+            branches.append(retrival_class._check_branch_cache(repo)[-1])
+        return branches
     
     def changed_repo(repos):
         choices = retrival_class._check_branch_cache(repos)
@@ -54,7 +49,7 @@ def main(args):
         choices = retrival_class._get_repo_branches(repo)
         if len(choices) == 0:
             return gr.update(visible=True), gr.update(visible=True, interactive=False)
-        already_selected = retrival_class._check_branch_cache(repo)
+        already_selected = retrival_class._check_branch_cache_short(repo)
         if len(already_selected) == 0:
             return gr.update(choices=choices, value=[], visible=True), gr.update(visible=True, interactive=False)
         return gr.update(choices=choices, value=already_selected, visible=True), gr.update(visible=True, interactive=True)
