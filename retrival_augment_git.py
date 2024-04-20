@@ -112,23 +112,18 @@ class RetrivalAugment:
     def _get_cached_shared(self):
         # Return all caches secondary directories
         return list(self.cached['cached_shared'])
-    
-    def _check_branch_cache_short(self, base_repo: str):
-        # Return all cached branches to given repo
-        if not base_repo.endswith('.git'):
-            return []
-        if base_repo in self.cached['cached_repos'].keys():
-            return self.cached['cached_repos'][base_repo]
-        return []
+
       
     def _check_branch_cache(self, base_repos: list[str]):
         # Return all cached branches to given repos
+        if len(base_repos) == 1:
+            base_repos = base_repos[0]
         if not isinstance(base_repos, list):
             _, repo_rel_name = os.path.split(base_repos.removesuffix('.git'))
             repo_dir = os.path.dirname(base_repos)
             _, repo_rel_dir =  os.path.split(repo_dir)
             if base_repos in self.cached['cached_repos'].keys():
-                return list(map(lambda x: f'{repo_rel_dir}/{repo_rel_name}/{x}', self.cached['cached_repos'][base_repos])) 
+                return self.cached['cached_repos'][base_repos]
             return []
         cache_branches = []
         for repo in base_repos:
@@ -251,7 +246,7 @@ class RetrivalAugment:
                         repo_name = repo.removesuffix('.git')
                         full_paths.append(f'[{rel_file_path_norm}]({repo_name}/blob/{true_ver}{rel_file_path})' )
                     full_paths = sorted(full_paths)
-                    result_string += f'\n #### Repo {version} \n' + '  \n'.join(full_paths)
+                    result_string += f'\n #### {"Repo" if len(git_repos) > 1 else "Branch"} {version} \n' + '  \n'.join(full_paths)
             
         return result_string
                            
