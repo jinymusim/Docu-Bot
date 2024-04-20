@@ -49,7 +49,7 @@ def main(args):
         choices = retrival_class._get_repo_branches(repo)
         if len(choices) == 0:
             return gr.update(visible=True), gr.update(visible=True, interactive=False)
-        already_selected = retrival_class._check_branch_cache(repo)
+        already_selected = retrival_class._check_branch_cache_short(repo)
         if len(already_selected) == 0:
             return gr.update(choices=choices, value=[], visible=True), gr.update(visible=True, interactive=False)
         return gr.update(choices=choices, value=already_selected, visible=True), gr.update(visible=True, interactive=True)

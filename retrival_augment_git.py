@@ -112,6 +112,14 @@ class RetrivalAugment:
     def _get_cached_shared(self):
         # Return all caches secondary directories
         return list(self.cached['cached_shared'])
+    
+    def _check_branch_cache_short(self, base_repo: str):
+        # Return all cached branches to given repo
+        if not base_repo.endswith('.git'):
+            return []
+        if base_repo in self.cached['cached_repos'].keys():
+            return self.cached['cached_repos'][base_repo]
+        return []
       
     def _check_branch_cache(self, base_repos: list[str]):
         # Return all cached branches to given repos
