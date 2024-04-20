@@ -41,8 +41,9 @@ def main(args):
         return branches
     
     def changed_repo(repos):
-        choices = get_good_branches(repos)
-        return gr.update(choices=choices, value=choices) 
+        choices = retrival_class._check_branch_cache(repos)
+        preset = get_good_branches(repos)
+        return gr.update(choices=choices, value=preset) 
     
     def selected_repo(repo):
         choices = retrival_class._get_repo_branches(repo)
