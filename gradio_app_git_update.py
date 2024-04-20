@@ -231,7 +231,7 @@ def main(args):
 
         
     with redirect_stdout(sys.stderr):
-        app, local, shared = demo.launch(share=False, server_name='0.0.0.0', server_port=7860, debug=True)
+        app, local, shared = demo.launch(share=False, server_name='0.0.0.0', server_port=7860)
     
 
 if __name__ == "__main__":
