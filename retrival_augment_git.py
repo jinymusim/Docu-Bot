@@ -52,20 +52,21 @@ class RetrivalAugment:
         self.version_specific_documents = {}
         
     
-    def __load_all_cached(self, api_key:str):
-        # Load each git repo
-        for key in self.cached['cached_repos'].keys():
-            # Embedding storage variable
-            self.version_specific_documents[key] = {}
-            normalized_github_path = key.removesuffix('.git')
+    def __load_cached_branches(self, git_repos, branches,api_key:str):
+        for repo in git_repos:
+            self.version_specific_documents[repo] = {}
+            normalized_github_path = repo.removesuffix('.git')
             _ ,repo_rel_name = os.path.split(normalized_github_path)
-            # Load all cached branches of the git repo
-            for branch in self.cached['cached_repos'][key]:
-                self.version_specific_documents[key][branch] = EmbeddingsDataset(os.path.join(self.cache_dir ,repo_rel_name, branch), 
-                                                                cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{branch}-embed'), 
+            for branch in branches:
+                brach_repo, true_ver = os.path.split(branch)
+                if brach_repo in repo:
+                    self.version_specific_documents[repo][true_ver] = EmbeddingsDataset(os.path.join(self.cache_dir , repo_rel_name, true_ver), 
+                                                                cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{true_ver}-embed'), 
                                                                 transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
+        
+    def __load_cached_shared(self, shared, api_key:str):
                 
-        for zip_name in self.cached['cached_shared']:
+        for zip_name in shared:
             self.shared_documents[zip_name] = EmbeddingsDataset(os.path.join(self.cache_dir, zip_name.removesuffix('.zip')), 
                                                     cache_dir=os.path.join(self.cache_dir, f'{zip_name.removesuffix(".zip")}-embed'), 
                                                     transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
@@ -224,7 +225,7 @@ class RetrivalAugment:
         elif api_key.strip() == '':
             return "No API Key Provided"
         
-        self.__load_all_cached(api_key=api_key)
+        self.__load_cached_branches(git_repos,versions,api_key=api_key)
         
         result_string = "### Most Relevant Documents"
         for repo in git_repos:
@@ -252,10 +253,7 @@ class RetrivalAugment:
         return result_string
                            
             
-    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None, temperature: float= 0.2, api_key:str = None, model:str = 'gpt-3.5-turbo'):
-        if len(self.version_specific_documents.keys()) == 0 and len(self.shared_documents.keys()) == 0:
-            yield 'I am not loaded with any documents. This could be because I was not given any documents or I was not given an API Key.'
-            return
+    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None, temperature: float= 0.2, api_key:str = None, model:str = 'gpt-3.5-turbo'):    
         if len(git_repos) == 0 and len(shared) == 0:
             yield 'I was not given any documentation path to work from.'
             return
@@ -265,6 +263,8 @@ class RetrivalAugment:
         elif api_key.strip() == '':
             yield "No API Key Provided"
             return
+        
+        self.__load_cached_shared(shared, api_key=api_key)
         
         
         version_context = []
