@@ -3,8 +3,8 @@ from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 from threading import Thread
 from zipfile import ZipFile, BadZipFile
-import PROMPTS
 import MODEL_TYPES
+import PROMPTS
 import CONTEXT_SIZE
 import os
 import torch
@@ -256,7 +256,7 @@ class RetrivalAugment:
         return result_string
                            
             
-    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None, temperature: float= 0.2):
+    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None, temperature: float= 0.2, system_prompt =PROMPTS.SYSTEM_PROMPT ):
         if len(self.version_specific_documents.keys()) == 0 and len(self.shared_documents.keys()) == 0:
             return 'I was not given any documents from which to answer.'
         
@@ -282,10 +282,10 @@ class RetrivalAugment:
         messages = [
             {
                 "role": "user",
-                "content": PROMPTS.SYSTEM_PROMPT_FAST + PROMPTS.INPUT_PROMPT_FAST.format(version=versions, 
-                                                                               version_context=version_context, 
-                                                                               shared_context=shared_context, 
-                                                                               inputs=inputs)
+                "content": system_prompt + PROMPTS.INPUT_PROMPT.format(version=versions, 
+                                                                        version_context=version_context, 
+                                                                        shared_context=shared_context, 
+                                                                        inputs=inputs)
             },
 
         ]
