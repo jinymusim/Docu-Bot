@@ -110,7 +110,7 @@ def main(args):
         
         # ==================================================================================
         # Config Section
-        change_temperature = gr.Slider(minimum=0.05, maximum=5.0, step=0.05, value=0.2, label='Temperature, Default = 0.2', interactive=True, visible=False)
+        change_temperature = gr.Slider(minimum=0.05, maximum=2.0, step=0.05, value=0.2, label='Temperature, Default = 0.2', interactive=True, visible=False)
         with gr.Row():
             with gr.Column():
                 temperature_return_button = gr.Button('Return', variant='secondary', visible=False)
