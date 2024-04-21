@@ -253,7 +253,7 @@ class RetrivalAugment:
         return result_string
                            
             
-    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None, temperature: float= 0.2, api_key:str = None, model:str = 'gpt-3.5-turbo'):    
+    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None, temperature: float= 0.2, api_key:str = None, model:str = 'gpt-3.5-turbo', system_prompt:str = PROMPTS.SYSTEM_PROMPT):    
         if len(git_repos) == 0 and len(shared) == 0:
             yield 'I was not given any documentation path to work from.'
             return
@@ -289,11 +289,11 @@ class RetrivalAugment:
         messages = [
             {
                 'role' : 'system',
-                'content' : PROMPTS.SYSTEM_PROMPT_FAST
+                'content' : system_prompt
             },
             {
                 "role": "user",
-                "content":  PROMPTS.INPUT_PROMPT_FAST.format(version=versions, 
+                "content":  PROMPTS.INPUT_PROMPT.format(version=versions, 
                                                             version_context=version_context, 
                                                             shared_context=shared_context, 
                                                             inputs=inputs)

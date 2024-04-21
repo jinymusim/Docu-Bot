@@ -3,7 +3,7 @@ import os
 import sys
 os.environ['TOKENIZERS_PARALLELISM'] = 'true'
 import MODEL_TYPES
-
+import PROMPTS
 import argparse
 import torch
 import gradio as gr
@@ -106,16 +106,18 @@ def main(args):
         # ==================================================================================
         # Config Section
         change_temperature = gr.Slider(minimum=0.05, maximum=2.0, step=0.05, value=0.2, label='Temperature, Default = 0.2', interactive=True, visible=False)
+        change_system_prompt = gr.Textbox(label='System Prompt',value=PROMPTS.SYSTEM_PROMPT, visible=False, interactive=True, lines=10, max_lines=10)
+        open_ai_model = gr.Dropdown(choices=MODEL_TYPES.LLM_MODELS, value=MODEL_TYPES.LLM_MODELS[0], label='OpenAI Model', visible=False, interactive=True)
+        open_ai_key = gr.Textbox(label='OpenAI API Key', visible=False, interactive=True, lines=1, max_lines=1)
+        
         with gr.Row():
             with gr.Column():
                 temperature_return_button = gr.Button('Return', variant='secondary', visible=False)
             with gr.Column():
-                temperature_reset_button = gr.Button('Reset', variant='primary', visible=False)
-        open_ai_model = gr.Dropdown(choices=MODEL_TYPES.LLM_MODELS, value=MODEL_TYPES.LLM_MODELS[0], label='OpenAI Model', visible=False, interactive=True)
-        open_ai_key = gr.Textbox(label='OpenAI API Key', visible=False, interactive=True, lines=1, max_lines=1)
+                reset_button = gr.Button('Reset', variant='primary', visible=False)
                 
         ## Config Section UI controll
-        temperature_reset_button.click(lambda : gr.update(value=0.2), [], [change_temperature])    
+        reset_button.click(lambda : [gr.update(value=0.2), gr.update(value=PROMPTS.SYSTEM_PROMPT)], [], [change_temperature, change_system_prompt])    
         
                 
         # ==================================================================================
@@ -156,9 +158,9 @@ def main(args):
         ).then(
             retrival_class._get_relevant_docs, inputs=[git_box, version_box, submited_question_box, open_ai_key], outputs=[documents]
         ).then(
-            retrival_class.__call__, inputs=[git_box,version_box, submited_question_box, shared_box, change_temperature, open_ai_key, open_ai_model], outputs=[answer_box]
+            retrival_class.__call__, inputs=[git_box,version_box, submited_question_box, shared_box, change_temperature, open_ai_key, open_ai_model, change_system_prompt], outputs=[answer_box]
         ).then(
-            lambda *args: callback.flag(args), [version_box, git_box, submited_question_box, answer_box, shared_box, open_ai_model, change_temperature], []
+            lambda *args: callback.flag(args), [version_box, git_box, submited_question_box, answer_box, shared_box, open_ai_model, change_temperature, change_system_prompt], []
         )
         
         add_repo.click(lambda :11 * [gr.update(visible=False)], [], [config_button,shared_box,add_file ,git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents]).then(
@@ -172,7 +174,7 @@ def main(args):
         )
         
         config_button.click(lambda : 11 * [gr.update(visible=False)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]).then(
-            lambda  : 5 * [gr.update(visible=True)], [], [open_ai_model, open_ai_key, change_temperature, temperature_return_button, temperature_reset_button]
+            lambda  : 6 * [gr.update(visible=True)], [], [open_ai_model, open_ai_key, change_temperature, temperature_return_button, reset_button, change_system_prompt]
         )
         # ==================================================================================
         # Returns
@@ -188,7 +190,7 @@ def main(args):
             lambda  : 11*[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
         )
         
-        temperature_return_button.click(lambda : 5*[gr.update(visible=False)], [], [open_ai_model, open_ai_key, change_temperature, temperature_return_button, temperature_reset_button]).then(
+        temperature_return_button.click(lambda : 6*[gr.update(visible=False)], [], [open_ai_model, open_ai_key, change_temperature, temperature_return_button, reset_button, change_system_prompt]).then(
             lambda : 11*[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
         )
         
@@ -219,7 +221,7 @@ def main(args):
         
         # ==================================================================================
         # Setup Section  
-        callback.setup([version_box, git_box, submited_question_box, answer_box, shared_box, open_ai_model, change_temperature], "flagged_data_points_all")
+        callback.setup([version_box, git_box, submited_question_box, answer_box, shared_box, open_ai_model, change_temperature, change_system_prompt], "flagged_data_points_all")
 
         ## Setup section controll
         demo.load(fn=update_repo, inputs=[], outputs=[git_box]).then(
