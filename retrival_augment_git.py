@@ -304,7 +304,7 @@ class RetrivalAugment:
             model=model,
             messages=messages,
             stream=True,
-            temperature=temperature
+            temperature=float(temperature) if (temperature != None and temperature > 0)  else 0.2,
         )
         
         partial_message = ""
