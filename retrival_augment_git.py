@@ -300,7 +300,7 @@ class RetrivalAugment:
             do_sample=True,
             top_p=0.99,
             top_k=500,
-            temperature=temperature,
+            temperature=float(temperature) if (temperature != None and temperature > 0)  else 0.2,
             num_beams=1,
         )
         t = Thread(target=self.model.generate, kwargs=generate_kwargs) 
