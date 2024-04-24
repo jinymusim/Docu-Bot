@@ -25,7 +25,7 @@ def parse_boolean(value):
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--use-mixtral", default=False, type=parse_boolean, help='Use Mixtral model for generation')
-
+parser.add_argument("--max-branch-boxes", default=10, type=int, help='Maximal number of branches to cache at once')
 
 def main(args):
     
@@ -58,6 +58,14 @@ def main(args):
         if len(branches) == 0:
             return gr.update(visible=True, interactive=False)
         return gr.update(visible=True, interactive=True)    
+    
+    def display_branches_redirect(git_repo:str,braches:list[str]):
+        redirects = retrival_class._get_branches_redirects(git_repo, braches)
+        updates = []
+        for branch, redirect in zip(braches,redirects):
+            updates.append(gr.update(value=redirect, visible=True, label=f'{branch}'))
+        
+        return [gr.update(visible=True)] + 2*[gr.update(visible=True, interactive=True)] + updates + (args.max_branch_boxes - len(updates)) * [gr.update(visible=False)]
         
     
     def update_repo():
@@ -72,7 +80,6 @@ def main(args):
                             value=[], interactive=True)
         
     
-    
     with demo:
         gr.Markdown(
         f"""
@@ -84,20 +91,36 @@ def main(args):
         LLM model: [{MODEL_TYPES.MIXTRAL_MODEL if args.use_mixtral else MODEL_TYPES.DEFAULT_LM_MODEL}](https://huggingface.co/{MODEL_TYPES.MIXTRAL_MODEL if args.use_mixtral else MODEL_TYPES.DEFAULT_LM_MODEL})
         """)
         
+        # ===================================================================
+        # Config Redirects Section
+        branch_redirect_explain = gr.Markdown('Input Redirects for Branches, If left empty, will redirect to repository.', visible=False)
+        branch_redirect_boxes = [gr.Textbox(label=f'TEXTBOX {i}', value='', visible=False, max_lines=1, interactive=True) for i in range(args.max_branch_boxes)]
+        with gr.Row():
+            with gr.Column():
+                branch_submit_return_button = gr.Button('Return', variant='seconday', visible=False,  interactive=True)
+            with gr.Column():
+                branch_submit_button = gr.Button('Submit Repo', variant='primary', visible=False)
+                
+        ## Config Redirects Section UI controll
+        
+        
         # =================================================================== 
         # Add Git Repo/Branch Section
         git_update_box = gr.Dropdown(choices=retrival_class._get_cached_repos(), allow_custom_value=True, visible=False, interactive=True, label='Git Repository Input')
         with gr.Row():
             with gr.Column():
-                return_button = gr.Button('Return', variant='seconday', visible=False)
+                return_button = gr.Button('Return', variant='seconday', visible=False,  interactive=True)
             with gr.Column():
                 git_submit_button = gr.Button('Submit Repo', variant='primary', visible=False)
-        branch_update_box = gr.Dropdown(visible=False, multiselect=True, interactive=True, label='Branches to Cache')
-        branch_submit_button = gr.Button('Submit Branches', variant='primary', visible=False)
+        branch_update_box = gr.Dropdown(visible=False, multiselect=True, interactive=True, label='Branches to Cache',max_choices=args.max_branch_boxes)
+        branch_redirect_update_button = gr.Button('Submit Branches', variant='primary', visible=False)
         
         ## Git Section UI controll
         
-        git_submit_button.click(selected_repo, [git_update_box], [branch_update_box, branch_submit_button])
+        git_submit_button.click(selected_repo, [git_update_box], [branch_update_box, branch_redirect_update_button])
+        branch_redirect_update_button.click(lambda : 5*[gr.update(visible=False)], [], [git_update_box, git_submit_button, return_button, branch_redirect_update_button, branch_update_box]).then(
+            display_branches_redirect, [git_update_box, branch_update_box], [branch_redirect_explain, branch_submit_return_button, branch_submit_button]+ branch_redirect_boxes
+        ) 
         
         
         
@@ -154,7 +177,7 @@ def main(args):
         ## Main section UI controll
         git_box.change(fn=changed_repo, inputs=[git_box], outputs=[version_box])
         
-        branch_update_box.change(fn=changed_branches, inputs=[branch_update_box], outputs=[branch_submit_button])
+        branch_update_box.change(fn=changed_branches, inputs=[branch_update_box], outputs=[branch_redirect_update_button])
         
         submit_button.click(retrival_class.__call__, inputs=[git_box,version_box, question_box, shared_box, change_temperature, change_system_prompt], outputs=[answer_box]).then(
             lambda *args: callback.flag(args), [version_box, git_box, submited_question_box, answer_box, shared_box, change_temperature, change_system_prompt], []
@@ -177,7 +200,7 @@ def main(args):
         )
         # ==================================================================================
         # Returns
-        return_button.click(lambda : 5* [gr.update(visible=False)], [], [git_update_box, git_submit_button, return_button, branch_submit_button, branch_update_box]).then(
+        return_button.click(lambda : 5* [gr.update(visible=False)], [], [git_update_box, git_submit_button, return_button, branch_redirect_update_button, branch_update_box]).then(
             fn=update_repo, inputs=[], outputs=[git_box]   
         ).then(
             lambda :11* [gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
@@ -193,13 +216,17 @@ def main(args):
             lambda : 11*[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
         )
         
+        branch_submit_return_button.click(lambda : [gr.update(visible=False)]+12*[gr.update(visible=False, interactive=True)], [], [branch_redirect_explain,branch_submit_return_button, branch_submit_button] + branch_redirect_boxes).then(
+            lambda : 5*[gr.update(visible=True)], [], [git_update_box, git_submit_button, return_button, branch_redirect_update_button, branch_update_box]
+        )
+        
         # ==================================================================================
         # Submits with Returns
         
-        branch_submit_button.click(lambda : 3*[gr.update(interactive=False)], [], [git_submit_button, return_button, branch_submit_button]).then(
-            retrival_class._add_following_repo_branches, [git_update_box, branch_update_box], [] 
+        branch_submit_button.click(lambda : 2*[gr.update(interactive=False)], [], [branch_submit_return_button, branch_submit_button]).then(
+            retrival_class._add_following_repo_branches, [git_update_box, branch_update_box] + branch_redirect_boxes , [] 
         ).then(
-            lambda : 5* [gr.update(visible=False,interactive=True)], [], [git_update_box, git_submit_button, return_button, branch_submit_button, branch_update_box]
+            lambda : [gr.update(visible=False)]+ 12* [gr.update(visible=False,interactive=True)], [], [branch_redirect_explain, branch_submit_return_button, branch_submit_button] + branch_redirect_boxes
         ).then(
             fn=update_repo, inputs=[], outputs=[git_box]
         ).then(
