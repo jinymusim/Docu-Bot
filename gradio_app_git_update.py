@@ -35,8 +35,15 @@ def main(args):
     callback = gr.CSVLogger()
     
     def get_good_branches(git_repos: list[str]):
+        """Retrieves the latest branch for each given git repository.
+        Args:
+            git_repos (list[str]): A list of git repository URLs.
+        Returns:
+            list[str]: A list of the latest branches for each git repository.
+        """
         branches = []
         for repo in git_repos:
+            # Add the latest branch for repository.
             branches.append(retrival_class._check_branch_cache(repo)[-1])
         return branches
     
@@ -48,7 +55,7 @@ def main(args):
     def selected_repo(repo):
         choices = retrival_class._get_repo_branches(repo)
         if len(choices) == 0:
-            return gr.update(visible=True), gr.update(visible=True, interactive=False)
+            return gr.update(visible=True, choices=[], value=[]), gr.update(visible=True, interactive=False)
         already_selected = retrival_class._check_branch_cache_short(repo)
         if len(already_selected) == 0:
             return gr.update(choices=choices, value=[], visible=True), gr.update(visible=True, interactive=False)
@@ -99,7 +106,7 @@ def main(args):
             with gr.Column():
                 branch_submit_return_button = gr.Button('Return', variant='seconday', visible=False,  interactive=True)
             with gr.Column():
-                branch_submit_button = gr.Button('Submit Repo', variant='primary', visible=False)
+                branch_submit_button = gr.Button('Submit Branches', variant='primary', visible=False)
                 
         ## Config Redirects Section UI controll
         
@@ -113,9 +120,11 @@ def main(args):
             with gr.Column():
                 git_submit_button = gr.Button('Submit Repo', variant='primary', visible=False)
         branch_update_box = gr.Dropdown(visible=False, multiselect=True, interactive=True, label='Branches to Cache',max_choices=args.max_branch_boxes)
-        branch_redirect_update_button = gr.Button('Submit Branches', variant='primary', visible=False)
+        branch_redirect_update_button = gr.Button('Configure Branches', variant='primary', visible=False)
         
         ## Git Section UI controll
+        
+        git_update_box.change(lambda : 2 * [gr.update(visible=False)], [], [branch_update_box, branch_redirect_update_button])
         
         git_submit_button.click(selected_repo, [git_update_box], [branch_update_box, branch_redirect_update_button])
         branch_redirect_update_button.click(lambda : 5*[gr.update(visible=False)], [], [git_update_box, git_submit_button, return_button, branch_redirect_update_button, branch_update_box]).then(
