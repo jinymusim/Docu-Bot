@@ -51,6 +51,14 @@ def main(args):
         choices = retrival_class._check_branch_cache(repos)
         preset = get_good_branches(repos)
         return gr.update(choices=choices, value=preset) 
+    # Repo is in array as it is multiselect, so we need extract the element itself
+    def changed_new_repo(repo:list[str],branches: list[str]):
+        choices = retrival_class._check_branch_cache_short(repo[0])
+        good_branches = [branch for branch in branches if branch in choices]
+        if len(good_branches) == 0:
+            preset = get_good_branches(repo)
+            return gr.update(choices=choices, value=preset)
+        return gr.update(choices=choices, value=good_branches)
     
     def selected_repo(repo):
         choices = retrival_class._get_repo_branches(repo)
@@ -73,12 +81,21 @@ def main(args):
             updates.append(gr.update(value=redirect, visible=True, label=f'{branch}'))
         
         return [gr.update(visible=True)] + 2*[gr.update(visible=True, interactive=True)] + updates + (args.max_branch_boxes - len(updates)) * [gr.update(visible=False)]
-        
+          
     
     def update_repo():
         cashed_repos = retrival_class._get_cached_repos()
         if len(cashed_repos) == 0:
             return gr.update(choices=[], value=[], interactive=True)
+        return gr.update(choices=cashed_repos, 
+                        value=cashed_repos[0], interactive=True)
+        
+    def update_new_repo(repo:str):
+        cashed_repos = retrival_class._get_cached_repos()
+        if len(cashed_repos) == 0:
+            return gr.update(choices=[], value=[], interactive=True)
+        if repo in cashed_repos:
+            return gr.update(choices=cashed_repos, value=repo, interactive=True)
         return gr.update(choices=cashed_repos, 
                         value=cashed_repos[0], interactive=True)
         
@@ -237,9 +254,9 @@ def main(args):
         ).then(
             lambda : [gr.update(visible=False)]+ 12* [gr.update(visible=False,interactive=True)], [], [branch_redirect_explain, branch_submit_return_button, branch_submit_button] + branch_redirect_boxes
         ).then(
-            fn=update_repo, inputs=[], outputs=[git_box]
+            fn=update_new_repo, inputs=[git_update_box], outputs=[git_box]
         ).then(
-            fn=changed_repo, inputs=[git_box], outputs=[version_box]
+            fn=changed_new_repo, inputs=[git_box, branch_update_box], outputs=[version_box]
         ).then(
             lambda : 11 *[gr.update(visible=True)], [], [config_button, shared_box, git_box, version_box, question_box, submit_button, add_repo, submited_question_box, answer_box, documents, add_file]
         )
