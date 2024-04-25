@@ -259,7 +259,7 @@ class RetrivalAugment:
             # Check if branch is cached
             if requested_branch in self.cached['cached_repos'][base_repo].keys():
                 # Add redirect to cache
-                self.cached['cached_repos'][base_repo][requested_branch] = {'path': redirect}
+                self.cached['cached_repos'][base_repo][requested_branch] = {'path': redirect.strip().rstrip('/')}
                 # Skip if branch is already cached loaded
                 if not requested_branch in self.version_specific_documents[base_repo].keys():
                     # Load branch embeddings
@@ -307,7 +307,7 @@ class RetrivalAugment:
                                                                                           cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed'), 
                                                                                           transformer_model=self.base_embedding_model)
                         # Add branch to cache
-                        self.cached['cached_repos'][base_repo][requested_branch] = {'path': redirect.removesuffix('/')}
+                        self.cached['cached_repos'][base_repo][requested_branch] = {'path': redirect.strip().rstrip('/')}
                         # Close the zip file
                         zf.close()
                         # Remove the zip file
