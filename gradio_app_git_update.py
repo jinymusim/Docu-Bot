@@ -53,6 +53,8 @@ def main(args):
         return gr.update(choices=choices, value=preset) 
     # Repo is in array as it is multiselect, so we need extract the element itself
     def changed_new_repo(repo:list[str],branches: list[str]):
+        if len(repo) == 0:
+            gr.update(choices=[], value=[])
         choices = retrival_class._check_branch_cache_short(repo[0])
         good_branches = [branch for branch in branches if branch in choices]
         if len(good_branches) == 0:
@@ -63,16 +65,16 @@ def main(args):
     def selected_repo(repo):
         choices = retrival_class._get_repo_branches(repo)
         if len(choices) == 0:
-            return gr.update(visible=True, choices=[], value=[]), gr.update(visible=True, interactive=False)
+            return gr.update(visible=True, choices=[], value=[]), gr.update(visible=True, interactive=False), gr.update(visible=True, interactive=False)
         already_selected = retrival_class._check_branch_cache_short(repo)
         if len(already_selected) == 0:
-            return gr.update(choices=choices, value=[], visible=True), gr.update(visible=True, interactive=False)
+            return gr.update(choices=choices, value=[], visible=True), gr.update(visible=True, interactive=False), gr.update(visible=True, interactive=False)
         return gr.update(choices=choices, value=already_selected, visible=True), gr.update(visible=True, interactive=True), gr.update(visible=True, interactive=True)
     
     def changed_branches(branches):
         if len(branches) == 0:
-            return gr.update(visible=True, interactive=False)
-        return gr.update(visible=True, interactive=True)    
+            return gr.update(visible=True, interactive=False), gr.update(visible=True, interactive=False)
+        return gr.update(visible=True, interactive=True), gr.update(visible=True, interactive=True)    
     
     def display_branches_redirect(git_repo:str,braches:list[str]):
         redirects = retrival_class._get_branches_redirects(git_repo, braches)
@@ -160,6 +162,8 @@ def main(args):
             display_branches_redirect, [git_update_box, branch_update_box], [branch_redirect_explain, branch_submit_return_button, branch_submit_button]+ branch_redirect_boxes
         ) 
         
+        branch_update_box.change(fn=changed_branches, inputs=[branch_update_box], outputs=[branch_redirect_update_button, branch_quick_submit_button])
+        
         
         
         # ==================================================================================
@@ -240,7 +244,6 @@ def main(args):
         ## Main section UI controll
         git_box.change(fn=changed_repo, inputs=[git_box], outputs=[version_box])
         
-        branch_update_box.change(fn=changed_branches, inputs=[branch_update_box], outputs=[branch_redirect_update_button])
         
         submit_button.click(retrival_class.__call__, inputs=[git_box,version_box, question_box, shared_box, change_temperature, change_system_prompt], outputs=[answer_box]).then(
             lambda *args: callback.flag(args), [version_box, git_box, submited_question_box, answer_box, shared_box, change_temperature, change_system_prompt], []
