@@ -252,14 +252,21 @@ class RetrivalAugment:
         if not base_repo in self.version_specific_documents.keys():
             # Add repo to loaded repos
             self.version_specific_documents[base_repo] = {}
+        # Check if no redirects are given (Quick submission)
+        if len(args) == 0:
+            redirect_mindfully_inputted = False
+            requested_redirects = [''] * len(repo_branches)
         # Collect all redirects
-        requested_redirects = list(args)
+        else:
+            requested_redirects = list(args)
+            redirect_mindfully_inputted = True
         # Iterate over all branches
         for requested_branch, redirect in zip(repo_branches, requested_redirects):
             # Check if branch is cached
             if requested_branch in self.cached['cached_repos'][base_repo].keys():
                 # Add redirect to cache
-                self.cached['cached_repos'][base_repo][requested_branch] = {'path': redirect.strip().rstrip('/')}
+                if redirect_mindfully_inputted:
+                    self.cached['cached_repos'][base_repo][requested_branch] = {'path': redirect.strip().rstrip('/')}
                 # Skip if branch is already cached loaded
                 if not requested_branch in self.version_specific_documents[base_repo].keys():
                     # Load branch embeddings
