@@ -85,6 +85,30 @@ class RetrivalAugment:
         except Exception as e:
             print(e)
             return []
+        
+    def _get_branches_redirects(self, base_repo: str, branches: list[str]):
+        """Retrieves the redirects for the specified branches in a given base repository.
+
+        Args:
+            base_repo (str): The name of the base repository.
+            branches (list[str]): A list of branch names.
+
+        Returns:
+            list[str]: A list of redirects corresponding to the branches. If a branch doesn't have a redirect, an empty string is returned for that branch.
+        """
+        # Empty redirects when repo not cached
+        if not base_repo in self.cached['cached_repos'].keys():
+            return [''] * len(branches)
+        redirects = []
+        # Retrive all redirects for branches
+        for branch in branches:
+            # Check if branch is cached
+            if branch in self.cached['cached_repos'][base_repo].keys():
+                redirects.append(self.cached['cached_repos'][base_repo][branch]['path'])
+            # If not cached, return empty string
+            else:
+                redirects.append('')
+        return redirects
          
     def _get_cached_repos(self):
         # Return all cached repos
@@ -99,7 +123,7 @@ class RetrivalAugment:
         if not base_repo.endswith('.git'):
             return []
         if base_repo in self.cached['cached_repos'].keys():
-            return self.cached['cached_repos'][base_repo]
+            return list(self.cached['cached_repos'][base_repo].keys())
         return []
     
     def _check_branch_cache(self, base_repos: list[str]):
@@ -109,7 +133,7 @@ class RetrivalAugment:
             repo_dir = os.path.dirname(base_repos)
             _, repo_rel_dir =  os.path.split(repo_dir)
             if base_repos in self.cached['cached_repos'].keys():
-                return list(map(lambda x: f'{repo_rel_dir}/{repo_rel_name}/{x}', self.cached['cached_repos'][base_repos])) 
+                return list(map(lambda x: f'{repo_rel_dir}/{repo_rel_name}/{x}', self.cached['cached_repos'][base_repos].keys())) 
             return []
         cache_branches = []
         for repo in base_repos:
@@ -119,10 +143,10 @@ class RetrivalAugment:
             _, repo_rel_dir =  os.path.split(repo_dir)
             
             if repo in self.cached['cached_repos'].keys():
-                cache_branches += list(map(lambda x: f'{repo_rel_dir}/{repo_rel_name}/{x}', self.cached['cached_repos'][repo])) 
+                cache_branches += list(map(lambda x: f'{repo_rel_dir}/{repo_rel_name}/{x}', self.cached['cached_repos'][repo].keys())) 
         return cache_branches
             
-    def _add_following_repo_branches(self, base_repo:str, repo_branches: list[str], api_key:str = None):
+    def _add_following_repo_branches(self, base_repo:str, repo_branches: list[str], api_key:str = None, *args):
         if not base_repo.endswith('.git'):
             return
         if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
@@ -132,11 +156,21 @@ class RetrivalAugment:
         normalized_github_path = base_repo.removesuffix('.git')
         _ ,repo_rel_name = os.path.split(normalized_github_path)
         if not base_repo in self.cached['cached_repos'].keys():
-            self.cached['cached_repos'][base_repo] = []
+            self.cached['cached_repos'][base_repo] = {}
         if not base_repo in self.version_specific_documents.keys():
             self.version_specific_documents[base_repo] = {}
-        for requested_branch in repo_branches:
-            if requested_branch in self.cached['cached_repos'][base_repo]:
+        # Check if no redirects are given (Quick submission)
+        if len(args) == 0:
+            redirect_mindfully_inputted = False
+            requested_redirects = [''] * len(repo_branches)
+        # Collect all redirects
+        else:
+            requested_redirects = list(args)
+            redirect_mindfully_inputted = True
+        for requested_branch, redirect in zip(repo_branches, requested_redirects):
+            if requested_branch in self.cached['cached_repos'][base_repo].keys():
+                if redirect_mindfully_inputted:
+                    self.cached['cached_repos'][base_repo][requested_branch] = {'path': redirect.strip().rstrip('/')}
                 if not requested_branch in self.version_specific_documents[base_repo].keys():
                     self.version_specific_documents[base_repo][requested_branch] = EmbeddingsDataset(os.path.join(self.cache_dir , repo_rel_name, requested_branch), 
                                                                                       cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed'), 
@@ -169,14 +203,15 @@ class RetrivalAugment:
                         self.version_specific_documents[base_repo][requested_branch] = EmbeddingsDataset(os.path.join(self.cache_dir , repo_rel_name, requested_branch), 
                                                                                           cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed'), 
                                                                                           transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
-                        self.cached['cached_repos'][base_repo].append(requested_branch)
+                        
+                        self.cached['cached_repos'][base_repo][requested_branch] = {'path': redirect.strip().rstrip('/')}
                         zf.close()
                         os.remove(os.path.join(self.cache_dir , f'{requested_branch}.zip'))
                     except Exception as e:
                         print(e)
                         os.remove(os.path.join(self.cache_dir , f'{requested_branch}.zip'))
         # Remove Key entry if embedding failed
-        if len(self.cached['cached_repos'][base_repo]) == 0:
+        if len(self.cached['cached_repos'][base_repo].keys()) == 0:
             self.cached['cached_repos'].pop(base_repo)
             self.version_specific_documents.pop(base_repo)
         
@@ -242,13 +277,25 @@ class RetrivalAugment:
                                                                                                                 fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
                     full_paths = []
                     for path in relevant_docs:
-                        
+                        # Get the relative file path
                         rel_file_path:str = path.split(true_ver)[-1].replace(os.sep, '/')
                         rel_file_path_norm = rel_file_path.removeprefix('/')
+                        # Check if the file is in a subdirectory
                         repo_name = repo.removesuffix('.git')
-                        full_paths.append(f'[{rel_file_path_norm}]({repo_name}/blob/{true_ver}{rel_file_path})' )
+                        # Check if the branch has a redirect
+                        if self.cached['cached_repos'][repo][true_ver]['path'].strip() != '':
+                            # Get the redirect name
+                            redirect_name = self.cached['cached_repos'][repo][true_ver]['path']
+                            # Add the full path to the list
+                            full_paths.append(f'[{rel_file_path_norm}]({redirect_name}{rel_file_path})' )   
+                        # If no redirect
+                        else:
+                            # Add Git path to the list
+                            full_paths.append(f'[{rel_file_path_norm}]({repo_name}/blob/{true_ver}{rel_file_path})' )
+                    # Sort the paths
                     full_paths = sorted(full_paths)
-                    result_string += f'\n #### Repo {version} \n' + '  \n'.join(full_paths)
+                    # Add the paths to the result string
+                    result_string += f'\n #### {"Repo" if len(git_repos) > 1 else "Branch"} {version} \n' + '  \n'.join(full_paths)
             
         return result_string
                            
