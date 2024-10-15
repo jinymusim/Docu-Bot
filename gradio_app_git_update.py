@@ -24,7 +24,8 @@ def parse_boolean(value):
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--use-mixtral", default=False, type=parse_boolean, help='Use Mixtral model for generation')
+parser.add_argument("--llm-model", default=MODEL_TYPES.DEFAULT_LM_MODEL, type=str, help='The LLM model to use for generation')
+parser.add_argument("--embed-model", default=MODEL_TYPES.DEFAULT_EMBED_MODEL, type=str, help='The embedding model to use for retrieval')
 parser.add_argument("--max-branch-boxes", default=10, type=int, help='Maximal number of branches to cache at once')
 
 def main(args):
@@ -185,9 +186,9 @@ def main(args):
         
         model_page_markdown = gr.Markdown(f"""## Currently used models
         
-        Embedding model: [{MODEL_TYPES.DEFAULT_EMBED_MODEL}](https://huggingface.co/{MODEL_TYPES.DEFAULT_EMBED_MODEL})
+        Embedding model: [{args.embed_model}](https://huggingface.co/{args.embed_model})
         
-        LLM model: [{MODEL_TYPES.MIXTRAL_MODEL if args.use_mixtral else MODEL_TYPES.DEFAULT_LM_MODEL}](https://huggingface.co/{MODEL_TYPES.MIXTRAL_MODEL if args.use_mixtral else MODEL_TYPES.DEFAULT_LM_MODEL})
+        LLM model: [{args.llm_model}](https://huggingface.co/{args.llm_model})
         """, visible=False)
         
         change_temperature = gr.Slider(minimum=0.05, maximum=2.0, step=0.05, value=0.2, label='Temperature, Default = 0.2', interactive=True, visible=False)

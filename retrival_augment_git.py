@@ -30,7 +30,12 @@ def supports_flash_attention():
     return (is_sm8x or is_sm9x) and flash_attention
 
 class RetrivalAugment:
-    def __init__(self, cache_repo_list=os.path.join(os.path.dirname(__file__), 'cached_repos.json'), cache_dir=os.path.join(os.path.dirname(__file__), 'py_cache'), args: argparse.Namespace = None) -> None:
+    def __init__(
+        self, 
+        cache_repo_list=os.path.join(os.path.dirname(__file__), 'cached_repos.json'), 
+        cache_dir=os.path.join(os.path.dirname(__file__), 'py_cache'), 
+        args: argparse.Namespace = None
+) -> None:
         """
         Initializes the RetrivalAugment class.
 
@@ -40,7 +45,7 @@ class RetrivalAugment:
             args (argparse.Namespace, optional): Command-line arguments. Defaults to None.
         """
         # Embedding Model to be Used in Document and Querry Embeddings
-        self.base_embedding_model = HuggingFaceEmbeddings(model_name=MODEL_TYPES.DEFAULT_EMBED_MODEL,
+        self.base_embedding_model = HuggingFaceEmbeddings(model_name=MODEL_TYPES.DEFAULT_EMBED_MODEL if args == None else args.embed_model,
                                                           model_kwargs={'device': 'cuda' if torch.cuda.is_available() else 'cpu'})
 
         self.cache_dir = cache_dir
@@ -55,7 +60,7 @@ class RetrivalAugment:
         else:
             self.cached = json.load(open(self.cache_repo_list, 'r'))
 
-        model_type = MODEL_TYPES.DEFAULT_LM_MODEL if args == None or not args.use_mixtral else MODEL_TYPES.MIXTRAL_MODEL
+        model_type = MODEL_TYPES.DEFAULT_LM_MODEL if args == None else args.llm_model
 
         # Sample device to be used by models
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
