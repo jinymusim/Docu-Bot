@@ -1,4 +1,11 @@
-DEFAULT_EMBED_MODEL = 'text-embedding-3-small'
-LLM_MODELS = [
-    'gpt-3.5-turbo', 'gpt-3.5-turbo-instruct', 'gpt-4-turbo', 'gpt-4-turbo-preview', 'gpt-4', 'gpt-4-32k', 'gpt-4o', 'gpt-4o-mini', 
-]
+DEFAULT_EMBED_MODEL = 'bigger_vectors'
+DEFAULT_EMBED_LOC = "http://localhost:5001/v1"
+LLM_MODELS = {
+    'gpt-3.5-turbo' : None, 
+    'gpt-4-turbo' : None, 
+    'gpt-4o' : None, 
+    'gpt-4o-mini' : None, 
+    "o1-mini" : None, 
+    "small_llm" : "http://localhost:5000/v1",
+    "bigger_llm" : "http://localhost:5000/v1",
+}

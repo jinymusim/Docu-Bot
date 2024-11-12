@@ -1,0 +1,16 @@
+gradio
+transformers
+langchain
+chromadb
+sentence_transformers
+fuzzywuzzy
+bitsandbytes
+accelerate
+packaging
+wheel
+ninja
+GitPython
+langchain-openai
+langchain-chroma
+langchain-community
+openai

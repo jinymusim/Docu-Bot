@@ -1,10 +1,12 @@
 from torch.utils.data import Dataset
 
-from langchain.document_loaders.directory import DirectoryLoader
-from langchain.document_loaders.text import TextLoader
-from langchain.docstore.document import Document
-from langchain.text_splitter import MarkdownTextSplitter, RecursiveCharacterTextSplitter, PythonCodeTextSplitter
-from langchain.vectorstores.chroma import Chroma
+from langchain_community.document_loaders import DirectoryLoader, TextLoader
+#from langchain.document_loaders.directory import DirectoryLoader
+#from langchain.document_loaders.text import TextLoader
+from langchain_core.documents import Document
+from langchain_text_splitters import MarkdownTextSplitter, RecursiveCharacterTextSplitter, PythonCodeTextSplitter
+from langchain_chroma import Chroma
+#from langchain.vectorstores.chroma import Chroma
 from langchain_openai import  OpenAIEmbeddings
 from fuzzywuzzy import fuzz
 
@@ -73,12 +75,11 @@ class EmbeddingsDataset(Dataset):
 
                 if len(documents) > 0:
                     docs = text_splitter.split_documents(documents)  
-                    for i in range(0,len(docs), EMBED_STEP):
+                    for i in range(0,len(docs)):
                         self.vectordb.add_documents(
-                        documents=docs[i:i + EMBED_STEP],
+                        documents=[docs[i]],
                         ) 
         
-        self.vectordb.persist()
         
     
     def __getitem__(self, index):

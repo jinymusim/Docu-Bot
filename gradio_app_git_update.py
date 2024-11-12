@@ -55,7 +55,7 @@ def main(args):
     
     def changed_new_repo(repo:list[str],branches: list[str]):
         if len(repo) == 0:
-            gr.update(choices=[], value=[])
+            return gr.update(choices=[], value=[])
         choices = retrival_class._check_branch_cache_short(repo[0])
         good_branches = [branch for branch in branches if branch in choices]
         if len(good_branches) == 0:
@@ -187,7 +187,7 @@ def main(args):
         
         change_temperature = gr.Slider(minimum=0.05, maximum=2.0, step=0.05, value=0.2, label='Temperature, Default = 0.2', interactive=True, visible=False)
         change_system_prompt = gr.Textbox(label='System Prompt',value=PROMPTS.SYSTEM_PROMPT, visible=False, interactive=True, lines=10, max_lines=10)
-        open_ai_model = gr.Dropdown(choices=MODEL_TYPES.LLM_MODELS, value=MODEL_TYPES.LLM_MODELS[0], label='OpenAI Model', visible=False, interactive=True)
+        open_ai_model = gr.Dropdown(choices=list(MODEL_TYPES.LLM_MODELS.keys()), value=list(MODEL_TYPES.LLM_MODELS.keys())[-1], label='Chosen Model', visible=False, interactive=True)
         open_ai_key = gr.Textbox(label='OpenAI API Key', visible=False, interactive=True, lines=1, max_lines=1)
         
         with gr.Row():
@@ -352,4 +352,3 @@ if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
     with torch.no_grad():
         main(args)
-

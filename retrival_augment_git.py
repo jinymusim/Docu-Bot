@@ -60,16 +60,20 @@ class RetrivalAugment:
             for branch in branches:
                 brach_repo, true_ver = os.path.split(branch)
                 if brach_repo in repo:
-                    self.version_specific_documents[repo][true_ver] = EmbeddingsDataset(os.path.join(self.cache_dir , repo_rel_name, true_ver), 
-                                                                cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{true_ver}-embed'), 
-                                                                transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
+                    self.version_specific_documents[repo][true_ver] = EmbeddingsDataset(
+                        os.path.join(self.cache_dir , repo_rel_name, true_ver), 
+                        cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{true_ver}-embed'), 
+                        transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key, base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
+                    )
         
     def __load_cached_shared(self, shared, api_key:str):
                 
         for zip_name in shared:
-            self.shared_documents[zip_name] = EmbeddingsDataset(os.path.join(self.cache_dir, zip_name.removesuffix('.zip')), 
-                                                    cache_dir=os.path.join(self.cache_dir, f'{zip_name.removesuffix(".zip")}-embed'), 
-                                                    transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
+            self.shared_documents[zip_name] = EmbeddingsDataset(
+                os.path.join(self.cache_dir, zip_name.removesuffix('.zip')), 
+                cache_dir=os.path.join(self.cache_dir, f'{zip_name.removesuffix(".zip")}-embed'), 
+                transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key, base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
+            )
       
     def _get_repo_branches(self, base_repo: str):
         # Check if proper git repo format
@@ -172,9 +176,11 @@ class RetrivalAugment:
                 if redirect_mindfully_inputted:
                     self.cached['cached_repos'][base_repo][requested_branch] = {'path': redirect.strip().rstrip('/')}
                 if not requested_branch in self.version_specific_documents[base_repo].keys():
-                    self.version_specific_documents[base_repo][requested_branch] = EmbeddingsDataset(os.path.join(self.cache_dir , repo_rel_name, requested_branch), 
-                                                                                      cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed'), 
-                                                                                      transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
+                    self.version_specific_documents[base_repo][requested_branch] = EmbeddingsDataset(
+                        os.path.join(self.cache_dir , repo_rel_name, requested_branch), 
+                        cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed'), 
+                        transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key, base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
+                    )
             else:
                 # Try also https://code.it4i.cz/sccs/docs.it4i.cz/-/archive/master/docs.it4i.cz-master.zip
                 subprocess.run(f'curl -L -o {os.path.abspath(os.path.join(self.cache_dir , requested_branch + ".zip"))} {normalized_github_path}/zipball/{requested_branch}', shell=True)
@@ -200,9 +206,11 @@ class RetrivalAugment:
                         if os.path.exists(os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed')):
                             shutil.rmtree(os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed'))
                         
-                        self.version_specific_documents[base_repo][requested_branch] = EmbeddingsDataset(os.path.join(self.cache_dir , repo_rel_name, requested_branch), 
-                                                                                          cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed'), 
-                                                                                          transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
+                        self.version_specific_documents[base_repo][requested_branch] = EmbeddingsDataset(
+                            os.path.join(self.cache_dir , repo_rel_name, requested_branch), 
+                            cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{requested_branch}-embed'), 
+                            transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key, base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
+                        )
                         
                         self.cached['cached_repos'][base_repo][requested_branch] = {'path': redirect.strip().rstrip('/')}
                         zf.close()
@@ -242,9 +250,11 @@ class RetrivalAugment:
                 if os.path.exists(os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed')):
                     shutil.rmtree(os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed'))
                     
-                self.shared_documents[zip_name] = EmbeddingsDataset(os.path.join(self.cache_dir , zip_name.removesuffix('.zip')), 
-                                                    cache_dir=os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed'), 
-                                                    transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key))
+                self.shared_documents[zip_name] = EmbeddingsDataset(
+                    os.path.join(self.cache_dir , zip_name.removesuffix('.zip')), 
+                    cache_dir=os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed'), 
+                    transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key, base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
+                )
                 self.cached['cached_shared'].append(zip_name)
                 zf.close()
                 os.remove(os.path.join(self.cache_dir , zip_name))   
@@ -346,10 +356,11 @@ class RetrivalAugment:
                                                             inputs=inputs)
             },
         ] 
-        open_api = OpenAI(api_key=api_key)
+        open_api = OpenAI(api_key=api_key, base_url=MODEL_TYPES.LLM_MODELS[model])
         completion = open_api.chat.completions.create(
             model=model,
             messages=messages,
+            max_tokens=1024,
             stream=True,
             temperature=float(temperature) if (temperature != None and temperature > 0)  else 0.2,
         )
