@@ -24,7 +24,6 @@ def parse_boolean(value):
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--use-mixtral", default=False, type=parse_boolean, help='Use Mixtral model for generation')
 parser.add_argument("--max-branch-boxes", default=10, type=int, help='Maximal number of branches to cache at once')
 
 
@@ -247,7 +246,7 @@ def main(args):
         submit_button.click(lambda x: x, [question_box], [submited_question_box]).then(
             lambda : gr.update(value=''), [],[question_box]
         ).then(
-            retrival_class._get_relevant_docs, inputs=[git_box, version_box, submited_question_box, open_ai_key], outputs=[documents]
+            retrival_class._get_relevant_docs, inputs=[git_box, version_box, submited_question_box], outputs=[documents]
         ).then(
             retrival_class.__call__, inputs=[git_box,version_box, submited_question_box, shared_box, change_temperature, open_ai_key, open_ai_model, change_system_prompt], outputs=[answer_box]
         ).then(

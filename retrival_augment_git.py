@@ -32,7 +32,12 @@ def supports_flash_attention():
 
 class RetrivalAugment:
     
-    def __init__(self, cache_repo_list = os.path.join(os.path.dirname(__file__), 'cached_repos.json'), cache_dir= os.path.join(os.path.dirname(__file__), 'py_cache'), args:argparse.Namespace = None) -> None:
+    def __init__(
+        self, 
+        cache_repo_list = os.path.join(os.path.dirname(__file__), 'cached_repos.json'), 
+        cache_dir= os.path.join(os.path.dirname(__file__), 'py_cache'), 
+        args:argparse.Namespace = None
+    ) -> None:
         # Embedding Model to be Used in Document and Querry Embeddings
         
         self.cache_dir = cache_dir
@@ -50,29 +55,32 @@ class RetrivalAugment:
         # Template variable for shared documents that could be uploaded
         self.shared_documents = {}
         self.version_specific_documents = {}
+        self.__load_all_cached()
         
     
-    def __load_cached_branches(self, git_repos, branches,api_key:str):
-        for repo in git_repos:
-            self.version_specific_documents[repo] = {}
-            normalized_github_path = repo.removesuffix('.git')
-            _ ,repo_rel_name = os.path.split(normalized_github_path)
-            for branch in branches:
-                brach_repo, true_ver = os.path.split(branch)
-                if brach_repo in repo:
-                    self.version_specific_documents[repo][true_ver] = EmbeddingsDataset(
-                        os.path.join(self.cache_dir , repo_rel_name, true_ver), 
-                        cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{true_ver}-embed'), 
-                        transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key, base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
+    def __load_all_cached(self):
+        """Load all cached repositories and shared documents.
+        """
+        # Load each git repo
+        for key in self.cached['cached_repos'].keys():
+            # Embedding storage variable
+            self.version_specific_documents[key] = {}
+            normalized_github_path = key.removesuffix('.git')
+            _, repo_rel_name = os.path.split(normalized_github_path)
+            # Load all cached branches of the git repo
+            for branch in self.cached['cached_repos'][key].keys():
+                    self.version_specific_documents[key][branch] = EmbeddingsDataset(
+                        os.path.join(self.cache_dir , repo_rel_name, branch), 
+                        cache_dir=os.path.join(self.cache_dir , f'{repo_rel_name}-{branch}-embed'), 
+                        transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key='None', base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
                     )
         
-    def __load_cached_shared(self, shared, api_key:str):
                 
-        for zip_name in shared:
+        for zip_name in self.cached['cached_shared']:
             self.shared_documents[zip_name] = EmbeddingsDataset(
                 os.path.join(self.cache_dir, zip_name.removesuffix('.zip')), 
                 cache_dir=os.path.join(self.cache_dir, f'{zip_name.removesuffix(".zip")}-embed'), 
-                transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key, base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
+                transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key='None', base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
             )
       
     def _get_repo_branches(self, base_repo: str):
@@ -266,13 +274,7 @@ class RetrivalAugment:
                 
         json.dump(self.cached, open(self.cache_repo_list, 'w+'), indent=6)
         
-    def _get_relevant_docs(self, git_repos: list[str], versions: list[str], inputs, api_key:str = None) -> str:
-        #if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
-        #    api_key = os.getenv('OPENAI_API_KEY')
-        #elif api_key.strip() == '':
-        #    return "No API Key Provided"
-        api_key = 'API_KEY'
-        self.__load_cached_branches(git_repos,versions,api_key=api_key)
+    def _get_relevant_docs(self, git_repos: list[str], versions: list[str], inputs) -> str:
         
         result_string = "### Most Relevant Documents"
         for repo in git_repos:
@@ -284,9 +286,11 @@ class RetrivalAugment:
             for version in versions:
                 if f"{repo_rel_dir}/{repo_rel_name}" in version:
                     _, true_ver = os.path.split(version)    
-                    relevant_docs = (self.version_specific_documents[repo][true_ver]).relevant_docs_filename(inputs, 
-                                                                                                                k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), 
-                                                                                                                fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
+                    relevant_docs = (self.version_specific_documents[repo][true_ver]).relevant_docs_filename(
+                        inputs, 
+                        k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), 
+                        fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions))
+                    )
                     full_paths = []
                     for path in relevant_docs:
                         # Get the relative file path
@@ -322,8 +326,6 @@ class RetrivalAugment:
         elif api_key.strip() == '':
             yield "No API Key Provided"
             return
-        
-        self.__load_cached_shared(shared, api_key=api_key)
         
         
         version_context = []
