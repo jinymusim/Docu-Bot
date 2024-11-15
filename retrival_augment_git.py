@@ -246,7 +246,7 @@ class RetrivalAugment:
                     
                 os.makedirs(os.path.join(self.cache_dir , zip_name.removesuffix('.zip')), exist_ok=True)
                     
-                filenames = list(filter(lambda x: x.endswith('.txt') or x.endswith('.md') or x.endswith('.rst'), zf.namelist()) )
+                filenames = zf.namelist()
                 zf.extractall(os.path.join(self.cache_dir , zip_name.removesuffix('.zip')), members=filenames)
                 
                 if os.path.exists(os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed')):
