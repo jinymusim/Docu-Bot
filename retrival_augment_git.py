@@ -157,6 +157,7 @@ class RetrivalAugment:
         #    api_key = os.getenv('OPENAI_API_KEY')
         #elif api_key.strip() == '':
         #    return
+        api_key = 'API_KEY'
         normalized_github_path = base_repo.removesuffix('.git')
         _ ,repo_rel_name = os.path.split(normalized_github_path)
         if not base_repo in self.cached['cached_repos'].keys():
@@ -230,6 +231,7 @@ class RetrivalAugment:
         #    api_key = os.getenv('OPENAI_API_KEY')
         #elif api_key.strip() == '':
         #    return
+        api_key = 'API_KEY'
         _, zip_name = os.path.split(zip_info)
         if not zip_name.endswith('.zip') or zip_name in self.cached['cached_shared']:
             os.remove(zip_info)
@@ -269,7 +271,7 @@ class RetrivalAugment:
         #    api_key = os.getenv('OPENAI_API_KEY')
         #elif api_key.strip() == '':
         #    return "No API Key Provided"
-        
+        api_key = 'API_KEY'
         self.__load_cached_branches(git_repos,versions,api_key=api_key)
         
         result_string = "### Most Relevant Documents"
