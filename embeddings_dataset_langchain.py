@@ -1,8 +1,8 @@
 from torch.utils.data import Dataset
 
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+#__import__('pysqlite3')
+#import sys
+#sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 #from langchain.document_loaders.directory import DirectoryLoader
