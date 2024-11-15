@@ -60,7 +60,7 @@ class EmbeddingsDataset(Dataset):
                 ('*.md',  {'language': Language.MARKDOWN ,'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,}),
                 ('*.rst',  {'language': Language.RST, 'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,}),
                 ('*.txt',  {'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,}),
-                ('*.py', {'language': Language.PYTHON, 'chunk_size' : 100, 'chunk_overlap'  : 0, 'length_function' : len,})
+                ('*.py', {'language': Language.PYTHON, 'chunk_size' : 100, 'chunk_overlap'  : 0, 'length_function' : len,}),
                 ('*.html', {'language': Language.HTML, 'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,}),
                 ('*.tex', {'language': Language.LATEX, 'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,}),
             ]
