@@ -153,10 +153,10 @@ class RetrivalAugment:
     def _add_following_repo_branches(self, base_repo:str, repo_branches: list[str], api_key:str = None, *args):
         if not base_repo.endswith('.git'):
             return
-        if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
-            api_key = os.getenv('OPENAI_API_KEY')
-        elif api_key.strip() == '':
-            return
+        #if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
+        #    api_key = os.getenv('OPENAI_API_KEY')
+        #elif api_key.strip() == '':
+        #    return
         normalized_github_path = base_repo.removesuffix('.git')
         _ ,repo_rel_name = os.path.split(normalized_github_path)
         if not base_repo in self.cached['cached_repos'].keys():
@@ -226,10 +226,10 @@ class RetrivalAugment:
         json.dump(self.cached, open(self.cache_repo_list, 'w+'), indent=6)
         
     def _add_following_zip(self, zip_info:str, api_key:str = None):
-        if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
-            api_key = os.getenv('OPENAI_API_KEY')
-        elif api_key.strip() == '':
-            return
+        #if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
+        #    api_key = os.getenv('OPENAI_API_KEY')
+        #elif api_key.strip() == '':
+        #    return
         _, zip_name = os.path.split(zip_info)
         if not zip_name.endswith('.zip') or zip_name in self.cached['cached_shared']:
             os.remove(zip_info)
@@ -265,10 +265,10 @@ class RetrivalAugment:
         json.dump(self.cached, open(self.cache_repo_list, 'w+'), indent=6)
         
     def _get_relevant_docs(self, git_repos: list[str], versions: list[str], inputs, api_key:str = None) -> str:
-        if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
-            api_key = os.getenv('OPENAI_API_KEY')
-        elif api_key.strip() == '':
-            return "No API Key Provided"
+        #if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
+        #    api_key = os.getenv('OPENAI_API_KEY')
+        #elif api_key.strip() == '':
+        #    return "No API Key Provided"
         
         self.__load_cached_branches(git_repos,versions,api_key=api_key)
         
