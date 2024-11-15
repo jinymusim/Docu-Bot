@@ -199,7 +199,7 @@ class RetrivalAugment:
                         if os.path.exists(os.path.join(self.cache_dir , repo_rel_name, requested_branch)):
                             shutil.rmtree(os.path.join(self.cache_dir , repo_rel_name, requested_branch))
                         
-                        filenames = list(filter(lambda x: x.endswith('.txt') or x.endswith('.md') or x.endswith('.rst'), zf.namelist()) )
+                        filenames =  zf.namelist()
 
                         zf.extractall(os.path.join(self.cache_dir , repo_rel_name), members=filenames)
                         shutil.move(os.path.join(self.cache_dir , repo_rel_name, zf.namelist()[0]),
