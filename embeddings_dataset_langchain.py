@@ -84,7 +84,15 @@ class EmbeddingsDataset(Dataset):
                 documents = loader.load()
 
                 if len(documents) > 0:
-                    docs = text_splitter.split_documents(documents)  
+                    docs = text_splitter.split_documents(documents)
+                    # Filter Empty Documents
+                    index = 0
+                    while index < len(docs):
+                        if len(docs[index].page_content.strip()) == 0:
+                            docs.pop(index)
+                            index-=1
+                        index+=1
+                    # Embed Documents
                     for i in range(0,len(docs), EMBED_STEP):
                         self.vectordb.add_documents(
                         documents=docs[i:i+EMBED_STEP],
