@@ -87,7 +87,7 @@ class EmbeddingsDataset(Dataset):
                     docs = text_splitter.split_documents(documents)  
                     for i in range(0,len(docs), EMBED_STEP):
                         self.vectordb.add_documents(
-                        documents=[docs[i:i+EMBED_STEP]],
+                        documents=docs[i:i+EMBED_STEP],
                         ) 
         
         
