@@ -1,11 +1,12 @@
 from embeddings_dataset_langchain import EmbeddingsDataset
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer, TextIteratorStreamer
+
 from langchain_openai import  OpenAIEmbeddings
 from openai import OpenAI
 from threading import Thread
 from zipfile import ZipFile, BadZipFile
-import MODEL_TYPES
 import PROMPTS
+import MODEL_TYPES
 import CONTEXT_SIZE
 import os
 import torch
@@ -22,7 +23,6 @@ def supports_flash_attention():
     major, minor = torch.cuda.get_device_capability(0)
     
     flash_attention = False if  importlib.util.find_spec('flash_attn') is None else True
-    
     
     # Check if the GPU architecture is Ampere (SM 8.x) or newer (SM 9.x)
     is_sm8x = major == 8 and minor >= 0
@@ -47,7 +47,7 @@ class RetrivalAugment:
         self.cache_repo_list = cache_repo_list
         # Create cache list if not present, otherwise load it
         if not os.path.exists(self.cache_repo_list):
-            self.cached = {'cached_repos': {}, 'cached_shared': []}
+            self.cached = {'cached_repos': {}, 'cached_shared' : []}
             json.dump(self.cached, open(self.cache_repo_list, 'w+'), indent=6)
         else:
             self.cached = json.load(open(self.cache_repo_list, 'r'))
@@ -61,14 +61,11 @@ class RetrivalAugment:
     def __load_all_cached(self):
         """Load all cached repositories and shared documents.
         """
-        """Load all cached repositories and shared documents.
-        """
         # Load each git repo
         for key in self.cached['cached_repos'].keys():
             # Embedding storage variable
             self.version_specific_documents[key] = {}
             normalized_github_path = key.removesuffix('.git')
-            _, repo_rel_name = os.path.split(normalized_github_path)
             _, repo_rel_name = os.path.split(normalized_github_path)
             # Load all cached branches of the git repo
             for branch in self.cached['cached_repos'][key].keys():
@@ -329,7 +326,7 @@ class RetrivalAugment:
                 # Close the zip file
                 zf.close()
                 # Remove the zip file
-                os.remove(os.path.join(self.cache_dir , zip_name)) 
+                os.remove(os.path.join(self.cache_dir , zip_name))
             # If zip file is corrupted  
             except Exception as e:
                 # Print the error
@@ -363,10 +360,8 @@ class RetrivalAugment:
                     full_paths = []
                     for path in relevant_docs:
                         # Get the relative file path
-                        # Get the relative file path
                         rel_file_path:str = path.split(true_ver)[-1].replace(os.sep, '/')
                         rel_file_path_norm = rel_file_path.removeprefix('/')
-                        # Check if the file is in a subdirectory
                         # Check if the file is in a subdirectory
                         repo_name = repo.removesuffix('.git')
                         # Check if the branch has a redirect
@@ -380,20 +375,7 @@ class RetrivalAugment:
                             # Add Git path to the list
                             full_paths.append(f'[{rel_file_path_norm}]({repo_name}/blob/{true_ver}{rel_file_path})' )
                     # Sort the paths
-                        # Check if the branch has a redirect
-                        if self.cached['cached_repos'][repo][true_ver]['path'].strip() != '':
-                            # Get the redirect name
-                            redirect_name = self.cached['cached_repos'][repo][true_ver]['path']
-                            # Add the full path to the list
-                            full_paths.append(f'[{rel_file_path_norm}]({redirect_name}{rel_file_path})' )   
-                        # If no redirect
-                        else:
-                            # Add Git path to the list
-                            full_paths.append(f'[{rel_file_path_norm}]({repo_name}/blob/{true_ver}{rel_file_path})' )
-                    # Sort the paths
                     full_paths = sorted(full_paths)
-                    # Add the paths to the result string
-                    result_string += f'\n #### {"Repo" if len(git_repos) > 1 else "Branch"} {version} \n' + '  \n'.join(full_paths)
                     # Add the paths to the result string
                     result_string += f'\n #### {"Repo" if len(git_repos) > 1 else "Branch"} {version} \n' + '  \n'.join(full_paths)
             
