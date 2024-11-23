@@ -1,4 +1,6 @@
-SYSTEM_PROMPT = """Answer the QUESTIONS below using the DOCUMENTS below as context. While Answering follow these steps:
+# Description: Contains the prompt strings for the OpenAI API calls.
+SYSTEM_PROMPT = """You are a helpful AI assistant that answers questions based on the provided documents. 
+Answer user QUESTIONS using provided DOCUMENTS below as context. While Answering follow these steps:
 1. For each question/directive present in QUESTIONS:
     1a. Select the most relevant information from the context.
     1b. Generate short response with the information, with brevity in mind. Mention the filename of the used context.

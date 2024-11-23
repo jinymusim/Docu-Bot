@@ -24,9 +24,8 @@ def parse_boolean(value):
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--llm-model", default=MODEL_TYPES.DEFAULT_LM_MODEL, type=str, help='The LLM model to use for generation')
-parser.add_argument("--embed-model", default=MODEL_TYPES.DEFAULT_EMBED_MODEL, type=str, help='The embedding model to use for retrieval')
 parser.add_argument("--max-branch-boxes", default=10, type=int, help='Maximal number of branches to cache at once')
+
 
 def main(args):
     
@@ -52,10 +51,10 @@ def main(args):
         choices = retrival_class._check_branch_cache(repos)
         preset = get_good_branches(repos)
         return gr.update(choices=choices, value=preset) 
-    # Repo is in array as it is multiselect, so we need extract the element itself
+    
     def changed_new_repo(repo:list[str],branches: list[str]):
         if len(repo) == 0:
-            gr.update(choices=[], value=[])
+            return gr.update(choices=[], value=[])
         choices = retrival_class._check_branch_cache_short(repo[0])
         good_branches = [branch for branch in branches if branch in choices]
         if len(good_branches) == 0:
@@ -75,8 +74,8 @@ def main(args):
     def changed_branches(branches):
         if len(branches) == 0:
             return gr.update(visible=True, interactive=False), gr.update(visible=True, interactive=False)
-        return gr.update(visible=True, interactive=True), gr.update(visible=True, interactive=True)    
-    
+        return gr.update(visible=True, interactive=True), gr.update(visible=True, interactive=True)  
+       
     def display_branches_redirect(git_repo:str,braches:list[str]):
         redirects = retrival_class._get_branches_redirects(git_repo, braches)
         updates = []
@@ -84,7 +83,7 @@ def main(args):
             updates.append(gr.update(value=redirect, visible=True, label=f'{branch}', interactive=True))
         
         return [gr.update(visible=True)] + 2*[gr.update(visible=True, interactive=True)] + updates + (args.max_branch_boxes - len(updates)) * [gr.update(visible=False)]
-          
+           
     
     def update_repo():
         cashed_repos = retrival_class._get_cached_repos()
@@ -106,9 +105,7 @@ def main(args):
         return gr.update(choices=retrival_class._get_cached_shared(), 
                             value=[], interactive=True)
         
-    
     with demo:
-        
         
         # ===================================================================
         # Config Redirects Section
@@ -133,7 +130,7 @@ def main(args):
         add_repo_markdown = gr.Markdown("""## Add Git Repository/Branch
                                         Add a git repository and branch to the cache.
                                         """, visible=False)
-        
+    
         git_update_box = gr.Dropdown(choices=retrival_class._get_cached_repos(), allow_custom_value=True, visible=False, interactive=True, label='Git Repository Input')
         with gr.Row():
             with gr.Column():
@@ -146,7 +143,6 @@ def main(args):
                 branch_quick_submit_button = gr.Button('Quick Submit', variant='primary', visible=False)
             with gr.Column():
                 branch_redirect_update_button = gr.Button('Configure Branches', variant='secondary', visible=False)
-                   
         
         git_add_select_initial_boxes = [git_update_box, return_button, git_submit_button, add_repo_markdown]
         git_add_select_boxes = git_add_select_initial_boxes + [branch_update_box, branch_redirect_update_button, branch_quick_submit_button]
@@ -162,9 +158,6 @@ def main(args):
         branch_redirect_update_button.click(lambda : len(git_add_select_boxes)*[gr.update(visible=False)], [], git_add_select_boxes).then(
             display_branches_redirect, [git_update_box, branch_update_box], [branch_redirect_explain, branch_submit_return_button, branch_submit_button]+ branch_redirect_boxes
         ) 
-        
-        branch_update_box.change(fn=changed_branches, inputs=[branch_update_box], outputs=[branch_redirect_update_button, branch_quick_submit_button])
-        
         
         
         # ==================================================================================
@@ -183,26 +176,25 @@ def main(args):
         
         # ==================================================================================
         # Config Section
-        
-        model_page_markdown = gr.Markdown(f"""## Currently used models
-        
-        Embedding model: [{args.embed_model}](https://huggingface.co/{args.embed_model})
-        
-        LLM model: [{args.llm_model}](https://huggingface.co/{args.llm_model})
-        """, visible=False)
+        model_page_markdown = gr.Markdown(f"""## Configurations
+            Configure the OpenAI model, temperature and the system prompt.
+            """, visible=False)
         
         change_temperature = gr.Slider(minimum=0.05, maximum=2.0, step=0.05, value=0.2, label='Temperature, Default = 0.2', interactive=True, visible=False)
-        change_system_prompt = gr.Textbox(label='System Prompt', value=PROMPTS.SYSTEM_PROMPT ,lines=10, interactive=True, visible=False)
+        change_system_prompt = gr.Textbox(label='System Prompt',value=PROMPTS.SYSTEM_PROMPT, visible=False, interactive=True, lines=10, max_lines=10)
+        open_ai_model = gr.Dropdown(choices=list(MODEL_TYPES.LLM_MODELS.keys()), value=list(MODEL_TYPES.LLM_MODELS.keys())[-1], label='Chosen Model', visible=False, interactive=True)
+        open_ai_key = gr.Textbox(label='OpenAI API Key', visible=False, interactive=True, lines=1, max_lines=1)
         
         with gr.Row():
             with gr.Column():
                 temperature_return_button = gr.Button('Return', variant='secondary', visible=False)
             with gr.Column():
                 reset_button = gr.Button('Reset', variant='primary', visible=False)
-           
-        config_section_boxes = [model_page_markdown, change_temperature, change_system_prompt, 
-                                temperature_return_button, reset_button]
-           
+                
+                
+        config_section_boxes = [model_page_markdown, temperature_return_button, reset_button, 
+                                change_temperature, change_system_prompt, open_ai_model, open_ai_key]
+                
         ## Config Section UI controll
         reset_button.click(lambda : [gr.update(value=0.2), gr.update(value=PROMPTS.SYSTEM_PROMPT)], [], [change_temperature, change_system_prompt])    
         
@@ -238,19 +230,24 @@ def main(args):
                 submited_question_box = gr.Textbox(label='Submited Question', lines=3, interactive=False, visible=False)
                 answer_box = gr.Textbox(label='Answer', lines=9, interactive=False, visible=False) 
                 documents = gr.Markdown(visible=False)
-                
+        
         main_page_boxes = [main_page_markdown, git_box, version_box, shared_box, question_box, submit_button, add_repo, 
-                           add_file, config_button, submited_question_box, answer_box, documents]
+                           add_file, config_button, submited_question_box, answer_box, documents]    
         
         ## Main section UI controll
         git_box.change(fn=changed_repo, inputs=[git_box], outputs=[version_box])
         
+        branch_update_box.change(fn=changed_branches, inputs=[branch_update_box], outputs=[branch_redirect_update_button, branch_quick_submit_button])
         
-        submit_button.click(retrival_class.__call__, inputs=[git_box,version_box, question_box, shared_box, change_temperature, change_system_prompt], outputs=[answer_box]).then(
-            lambda *args: callback.flag(args), [version_box, git_box, submited_question_box, answer_box, shared_box, change_temperature, change_system_prompt], []
-            )
-        submit_button.click(retrival_class._get_relevant_docs, inputs=[git_box, version_box, question_box], outputs=[documents])
-        submit_button.click(lambda x: x, [question_box], [submited_question_box]).then(lambda : gr.update(value=''), [],[question_box])
+        submit_button.click(lambda x: x, [question_box], [submited_question_box]).then(
+            lambda : gr.update(value=''), [],[question_box]
+        ).then(
+            retrival_class._get_relevant_docs, inputs=[git_box, version_box, submited_question_box], outputs=[documents]
+        ).then(
+            retrival_class.__call__, inputs=[git_box,version_box, submited_question_box, shared_box, change_temperature, open_ai_key, open_ai_model, change_system_prompt], outputs=[answer_box]
+        ).then(
+            lambda *args: callback.flag(args), [version_box, git_box, submited_question_box, answer_box, shared_box, open_ai_model, change_temperature, change_system_prompt], []
+        )
         
         add_repo.click(lambda :len(main_page_boxes) * [gr.update(visible=False)], [], main_page_boxes).then(
             fn=update_repo, inputs=[], outputs=[git_update_box]
@@ -291,7 +288,7 @@ def main(args):
         # Submits with Returns
         
         branch_submit_button.click(lambda : 2*[gr.update(interactive=False)], [], [branch_submit_return_button, branch_submit_button]).then(
-            retrival_class._add_following_repo_branches, [git_update_box, branch_update_box] + branch_redirect_boxes , [] 
+            retrival_class._add_following_repo_branches, [git_update_box, branch_update_box, open_ai_key] + branch_redirect_boxes , [] 
         ).then(
             lambda : len(config_redirects_boxes)* [gr.update(visible=False)], [], config_redirects_boxes
         ).then(
@@ -315,7 +312,7 @@ def main(args):
         )
         
         branch_quick_submit_button.click(lambda : len(git_add_select_boxes_no_markdown)*[gr.update(interactive=False)], [], git_add_select_boxes_no_markdown).then(
-            retrival_class._add_following_repo_branches, [git_update_box, branch_update_box] + [] , [] 
+            retrival_class._add_following_repo_branches, [git_update_box, branch_update_box,open_ai_key] + [] , [] 
         ).then(
             lambda : gr.update(visible=False), [], add_repo_markdown
         ).then(
@@ -327,9 +324,10 @@ def main(args):
         ).then(
             lambda : len(main_page_boxes) *[gr.update(visible=True)], [], main_page_boxes
         )
+        
         # ==================================================================================
         # Setup Section  
-        callback.setup([version_box, git_box, submited_question_box, answer_box, shared_box, change_temperature, change_system_prompt], "flagged_data_points_all")
+        callback.setup([version_box, git_box, submited_question_box, answer_box, shared_box, open_ai_model, change_temperature, change_system_prompt], "flagged_data_points_all")
 
         ## Setup section controll
         demo.load(fn=update_repo, inputs=[], outputs=[git_box]).then(
@@ -337,16 +335,15 @@ def main(args):
         ).then(
             fn=update_shared, inputs=[], outputs=[shared_box]
         ).then(
-            lambda : len(main_page_boxes) *[gr.update(visible=True)], [], main_page_boxes
+            lambda :len(main_page_boxes)* [gr.update(visible=True)], [], main_page_boxes
         )
 
         
     with redirect_stdout(sys.stderr):
-        app, local, shared = demo.launch(share=False, server_name='0.0.0.0', server_port=7860, debug=True)
+        app, local, shared = demo.launch(share=False, server_name='0.0.0.0', server_port=7860)
     
 
 if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
     with torch.no_grad():
         main(args)
-

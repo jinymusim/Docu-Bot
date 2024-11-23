@@ -1,11 +1,17 @@
 from torch.utils.data import Dataset
 
-from langchain.document_loaders.directory import DirectoryLoader
-from langchain.document_loaders.text import TextLoader
-from langchain.docstore.document import Document
-from langchain.text_splitter import MarkdownTextSplitter, RecursiveCharacterTextSplitter, PythonCodeTextSplitter
-from langchain.vectorstores.chroma import Chroma
-from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
+#__import__('pysqlite3')
+#import sys
+#sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
+from langchain_community.document_loaders import DirectoryLoader, TextLoader
+#from langchain.document_loaders.directory import DirectoryLoader
+#from langchain.document_loaders.text import TextLoader
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
+from langchain_chroma import Chroma
+#from langchain.vectorstores.chroma import Chroma
+from langchain_openai import  OpenAIEmbeddings
 from fuzzywuzzy import fuzz
 
 import os
@@ -17,7 +23,7 @@ def mean_pooling(model_output, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
-EMBED_STEP = 2048
+EMBED_STEP = 256
 
 
 #class MyEmbeddingFunction(EmbeddingFunction):
@@ -33,7 +39,7 @@ EMBED_STEP = 2048
 #        return self.__call__(input)
 
 class EmbeddingsDataset(Dataset):
-    def __init__(self, datasource_directory, transformer_model: HuggingFaceEmbeddings, cache_dir =os.path.join(os.path.dirname(__file__), "chroma-embed-cache") ):
+    def __init__(self, datasource_directory, transformer_model: OpenAIEmbeddings, cache_dir =os.path.join(os.path.dirname(__file__), "chroma-embed-cache") ):
         self.cache_dir = os.path.join(os.path.dirname(__file__), cache_dir )
         self.embedd_function = transformer_model
         self.source_dir = datasource_directory
@@ -51,34 +57,47 @@ class EmbeddingsDataset(Dataset):
         if not exist:
         
             data_sources_splitter_pairs = [
-                ('*.md', MarkdownTextSplitter, {'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,}),
-                ('*.rst', MarkdownTextSplitter, {'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,}),
-                #('*.md', SemanticChunker, self.embedd_function),
-                ('*.txt', RecursiveCharacterTextSplitter, {'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,}),
-                #('*.py', PythonCodeTextSplitter, {'chunk_size' : 400, 'chunk_overlap'  : 150, 'length_function' : len,})
-                #('*.txt', SemanticChunker, self.embedd_function)
+                ('*.md',  {'language': Language.MARKDOWN ,'chunk_size' : 1000, 'chunk_overlap'  : 300, 'length_function' : len,}),
+                ('*.rst',  {'language': Language.RST, 'chunk_size' : 1000, 'chunk_overlap'  : 300, 'length_function' : len,}),
+                ('*.txt',  {'chunk_size' : 1000, 'chunk_overlap'  : 300, 'length_function' : len,}),
+                ('*.py', {'language': Language.PYTHON, 'chunk_size' : 1000, 'chunk_overlap'  : 150, 'length_function' : len,}),
+                ('*.html', {'language': Language.HTML, 'chunk_size' : 1000, 'chunk_overlap'  : 300, 'length_function' : len,}),
+                ('*.tex', {'language': Language.LATEX, 'chunk_size' : 1000, 'chunk_overlap'  : 300, 'length_function' : len,}),
             ]
+            
 
-            for ending, splitter, kwargs_splitter in data_sources_splitter_pairs:
+            for ending, kwargs_splitter in data_sources_splitter_pairs:
             
                 text_loader_kwargs={'autodetect_encoding': True, "encoding": 'utf-8'}
                 loader = DirectoryLoader(datasource_directory, show_progress=True, recursive=True, glob=ending,
                         loader_cls=TextLoader, loader_kwargs=text_loader_kwargs)
 
-                text_splitter = splitter(
-                    **kwargs_splitter
-                )
+                if 'language' in kwargs_splitter:
+                    text_splitter = RecursiveCharacterTextSplitter.from_language(
+                        **kwargs_splitter
+                    )
+                else:
+                    text_splitter = RecursiveCharacterTextSplitter(
+                        **kwargs_splitter
+                    )
 
                 documents = loader.load()
 
                 if len(documents) > 0:
-                    docs = text_splitter.split_documents(documents)  
+                    docs = text_splitter.split_documents(documents)
+                    # Filter Empty Documents
+                    index = 0
+                    while index < len(docs):
+                        if len(docs[index].page_content.strip()) == 0:
+                            docs.pop(index)
+                            index-=1
+                        index+=1
+                    # Embed Documents
                     for i in range(0,len(docs), EMBED_STEP):
                         self.vectordb.add_documents(
-                        documents=docs[i:i + EMBED_STEP],
+                        documents=docs[i:i+EMBED_STEP],
                         ) 
         
-        self.vectordb.persist()
         
     
     def __getitem__(self, index):
@@ -124,7 +143,7 @@ class EmbeddingsDataset(Dataset):
                 filepaths.append(doc.metadata['source'])
         return filepaths
     
-    def querry_documents(self, query, k=5, fetch_k=30):
+    def querry_documents(self, query, k=5, fetch_k=30):  
         documents = self.vectordb.max_marginal_relevance_search(query, k=k, fetch_k=fetch_k)
         docuemnt_filenames = []
         i=0
@@ -143,7 +162,7 @@ class EmbeddingsDataset(Dataset):
         
         return full_documents
     
-    def querry_documents_small(self, query, k=5, fetch_k=30):
+    def querry_documents_small(self, query, k=5, fetch_k=30): 
         documents = self.vectordb.max_marginal_relevance_search(query, k=k, fetch_k=fetch_k)
         full_documents = []
         for document in documents:

@@ -12,13 +12,18 @@ They are available on Microsoft website [Build Tools](https://visualstudio.micro
 
 ## Selected models
 
-Following models were selected as Default models for RAG.
+Following model was selected as Default models for Embedding.
 
-- Embedding Model: [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
-- Language Model: [mistralai/Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2)
-- Large Language Model (Mixtral): [mistralai/Mixtral-8x7B-Instruct-v0.1](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1)
+- Embedding Model: [text-embedding-3-small](https://platform.openai.com/docs/guides/embeddings/embedding-models)
 
-To change them, rewrite the default values in ***MODEL_TYPES.py***
+To change it, rewrite the default value in ***MODEL_TYPES.py***
+
+The Default LLM model was seleted as:
+
+- LLM Model: [gpt-3.5-turbo](https://openai.com/blog/gpt-3-5-turbo-fine-tuning-and-api-updates)
+
+But this is changable in the ***Config*** section, allowing user to choose OpenAI LLM of their choice.
+
 
 ## Number of Retrieved Files
 
@@ -34,37 +39,27 @@ These numbers can be altered. The selected values were observed to be good midle
 ## How to Run
 To run, clone this repository and install dependancies in following steps
 ```
-pip install torch --index-url https://download.pytorch.org/whl/cu121
 pip install  -r requirements.txt
 ```
-
 To run the solution, run python on script gradio_app_git_update.py
 
 ```
 python gradio_app_git_update.py
 ```
-This will produce a link to a frontend UI where user can input questions.
+This will produce a link to a frontend UI.  
+To utilize OpenAI models it is required to provide API key in the ***Config*** section.
 
+### Provide Companny API key
 
-### GPU acceleration
+If maneged behined authetication system, API key can be set as a default option.  
+The user inputed API key will be used if inputed.  
 
-If the utilized GPU is of newer desing (A40, A100, H100), flash attention is good acceleration for better inference.  
-To activate, install following package.
+To set company wide key, set eviromental variable OPENAI_API_KEY that will be utilized by the application.
+```Windows
+# Windows
+$env:OPENAI_API_KEY=Company API key
 ```
-pip install  flash-attn --no-build-isolation
+```Linux
+# Linux
+export OPENAI_API_KEY=Company API key
 ```
-
-### Run With Large Language Model
-
-***IMPORTANT*** The model must be downloaded and loaded to ***RAM*** at original size of ***100GB***!  
-Make sure you have enough disk space and RAM.
-
-If the GPU contains enough onboard memory (>= 30GB), user can utilize Mixtral-8x7B model.  
-
-To start the app with Mixtral use the ***--use-mixtral=True*** argument
-
-```
-python gradio_app_git_update.py --use-mixtral=True
-```
-
-
