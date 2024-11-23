@@ -4,6 +4,7 @@ import sys
 os.environ['TOKENIZERS_PARALLELISM'] = 'true'
 import MODEL_TYPES
 import PROMPTS
+import PROMPTS
 import argparse
 import torch
 import gradio as gr
@@ -41,8 +42,15 @@ def main(args):
         Returns:
             list[str]: A list of the latest branches for each git repository.
         """
+        """Retrieves the latest branch for each given git repository.
+        Args:
+            git_repos (list[str]): A list of git repository URLs.
+        Returns:
+            list[str]: A list of the latest branches for each git repository.
+        """
         branches = []
         for repo in git_repos:
+            # Add the latest branch for repository.
             # Add the latest branch for repository.
             branches.append(retrival_class._check_branch_cache(repo)[-1])
         return branches
@@ -67,7 +75,11 @@ def main(args):
         if len(choices) == 0:
             return gr.update(visible=True, choices=[], value=[]), gr.update(visible=True, interactive=False), gr.update(visible=True, interactive=False)
         already_selected = retrival_class._check_branch_cache_short(repo)
+            return gr.update(visible=True, choices=[], value=[]), gr.update(visible=True, interactive=False), gr.update(visible=True, interactive=False)
+        already_selected = retrival_class._check_branch_cache_short(repo)
         if len(already_selected) == 0:
+            return gr.update(choices=choices, value=[], visible=True), gr.update(visible=True, interactive=False), gr.update(visible=True, interactive=False)
+        return gr.update(choices=choices, value=already_selected, visible=True), gr.update(visible=True, interactive=True), gr.update(visible=True, interactive=True)
             return gr.update(choices=choices, value=[], visible=True), gr.update(visible=True, interactive=False), gr.update(visible=True, interactive=False)
         return gr.update(choices=choices, value=already_selected, visible=True), gr.update(visible=True, interactive=True), gr.update(visible=True, interactive=True)
     
@@ -100,14 +112,45 @@ def main(args):
             return gr.update(choices=cashed_repos, value=repo, interactive=True)
         return gr.update(choices=cashed_repos, 
                         value=cashed_repos[0], interactive=True)
+        cashed_repos = retrival_class._get_cached_repos()
+        if len(cashed_repos) == 0:
+            return gr.update(choices=[], value=[], interactive=True)
+        return gr.update(choices=cashed_repos, 
+                        value=cashed_repos[0], interactive=True)
+        
+    def update_new_repo(repo:str):
+        cashed_repos = retrival_class._get_cached_repos()
+        if len(cashed_repos) == 0:
+            return gr.update(choices=[], value=[], interactive=True)
+        if repo in cashed_repos:
+            return gr.update(choices=cashed_repos, value=repo, interactive=True)
+        return gr.update(choices=cashed_repos, 
+                        value=cashed_repos[0], interactive=True)
         
     def update_shared():
         return gr.update(choices=retrival_class._get_cached_shared(), 
                             value=[], interactive=True)
         
     
-    
     with demo:
+        
+        
+        # ===================================================================
+        # Config Redirects Section
+        branch_redirect_explain = gr.Markdown("""## Add Branch Redirects
+                                              Input Redirects for Branches, If left empty, will redirect to repository.
+                                              """, visible=False)
+        branch_redirect_boxes = [gr.Textbox(label=f'TEXTBOX {i}', value='', visible=False, max_lines=1, interactive=True) for i in range(args.max_branch_boxes)]
+        with gr.Row():
+            with gr.Column():
+                branch_submit_return_button = gr.Button('Return', variant='seconday', visible=False,  interactive=True)
+            with gr.Column():
+                branch_submit_button = gr.Button('Submit Branches', variant='primary', visible=False)
+                
+        config_redirects_boxes = [branch_redirect_explain, branch_submit_return_button, branch_submit_button] + branch_redirect_boxes
+                
+        ## Config Redirects Section UI controll
+        
         
         
         # ===================================================================
@@ -134,12 +177,29 @@ def main(args):
                                         Add a git repository and branch to the cache.
                                         """, visible=False)
         
+        
+        add_repo_markdown = gr.Markdown("""## Add Git Repository/Branch
+                                        Add a git repository and branch to the cache.
+                                        """, visible=False)
+        
         git_update_box = gr.Dropdown(choices=retrival_class._get_cached_repos(), allow_custom_value=True, visible=False, interactive=True, label='Git Repository Input')
         with gr.Row():
             with gr.Column():
                 return_button = gr.Button('Return', variant='seconday', visible=False,  interactive=True)
+                return_button = gr.Button('Return', variant='seconday', visible=False,  interactive=True)
             with gr.Column():
                 git_submit_button = gr.Button('Submit Repo', variant='primary', visible=False)
+        branch_update_box = gr.Dropdown(visible=False, multiselect=True, interactive=True, label='Branches to Cache',max_choices=args.max_branch_boxes)
+        with gr.Row():
+            with gr.Column():
+                branch_quick_submit_button = gr.Button('Quick Submit', variant='primary', visible=False)
+            with gr.Column():
+                branch_redirect_update_button = gr.Button('Configure Branches', variant='secondary', visible=False)
+                   
+        
+        git_add_select_initial_boxes = [git_update_box, return_button, git_submit_button, add_repo_markdown]
+        git_add_select_boxes = git_add_select_initial_boxes + [branch_update_box, branch_redirect_update_button, branch_quick_submit_button]
+        git_add_select_boxes_no_markdown = [git_update_box, return_button, git_submit_button] + [branch_update_box, branch_redirect_update_button, branch_quick_submit_button]
         branch_update_box = gr.Dropdown(visible=False, multiselect=True, interactive=True, label='Branches to Cache',max_choices=args.max_branch_boxes)
         with gr.Row():
             with gr.Column():
@@ -170,8 +230,15 @@ def main(args):
                                         Add files to the shared directory.
                                         """, visible=False)
         
+        add_file_markdown = gr.Markdown("""## Add Files
+                                        Add files to the shared directory.
+                                        """, visible=False)
+        
         file_add_box = gr.File(file_count='single', file_types=['file'], interactive=True, visible=False, label='Zip Uploader')
         file_return_button = gr.Button('Return', variant='secondary', visible=False)
+        
+        file_section_boxes = [file_add_box, file_return_button, add_file_markdown]
+        file_section_boxes_no_markdown = [file_add_box, file_return_button]
         
         file_section_boxes = [file_add_box, file_return_button, add_file_markdown]
         file_section_boxes_no_markdown = [file_add_box, file_return_button]
@@ -201,6 +268,7 @@ def main(args):
                 
         ## Config Section UI controll
         reset_button.click(lambda : [gr.update(value=0.2), gr.update(value=PROMPTS.SYSTEM_PROMPT)], [], [change_temperature, change_system_prompt])    
+        reset_button.click(lambda : [gr.update(value=0.2), gr.update(value=PROMPTS.SYSTEM_PROMPT)], [], [change_temperature, change_system_prompt])    
         
                 
         # ==================================================================================
@@ -210,10 +278,21 @@ def main(args):
         """# Document Bot
         Problem analysis with Retrieval Augmented Generation.""", visible=False)
         
+        
+        main_page_markdown =  gr.Markdown(
+        """# Document Bot
+        Problem analysis with Retrieval Augmented Generation.""", visible=False)
+        
         with gr.Row():
             
             with gr.Column():
                 git_box = gr.Dropdown( choices=retrival_class._get_cached_repos(), label='Git Repos', 
+                                      value=[] if len(retrival_class._get_cached_repos()) == 0 else [retrival_class._get_cached_repos()[-1]], 
+                                      interactive=True, visible=False, multiselect=True)
+                version_box = gr.Dropdown(choices=[] if len(retrival_class._get_cached_repos()) == 0 else retrival_class._check_branch_cache([retrival_class._get_cached_repos()[-1]]), 
+                                          label='Branches', 
+                                          value=[] if len(retrival_class._get_cached_repos()) == 0 else get_good_branches([retrival_class._get_cached_repos()[-1]]), 
+                                          interactive=True, multiselect=True, visible=False)
                                       value=[] if len(retrival_class._get_cached_repos()) == 0 else [retrival_class._get_cached_repos()[-1]], 
                                       interactive=True, visible=False, multiselect=True)
                 version_box = gr.Dropdown(choices=[] if len(retrival_class._get_cached_repos()) == 0 else retrival_class._check_branch_cache([retrival_class._get_cached_repos()[-1]]), 
@@ -257,29 +336,44 @@ def main(args):
             fn=update_repo, inputs=[], outputs=[git_update_box]
         ).then(
             lambda : len(git_add_select_initial_boxes) * [gr.update(visible=True)], [], git_add_select_initial_boxes
+            lambda : len(git_add_select_initial_boxes) * [gr.update(visible=True)], [], git_add_select_initial_boxes
         )
         
+        add_file.click(lambda :len(main_page_boxes) * [gr.update(visible=False)], [], main_page_boxes).then(
+            lambda : len(file_section_boxes) * [gr.update(visible=True)], [], file_section_boxes
         add_file.click(lambda :len(main_page_boxes) * [gr.update(visible=False)], [], main_page_boxes).then(
             lambda : len(file_section_boxes) * [gr.update(visible=True)], [], file_section_boxes
         )
         
         config_button.click(lambda : len(main_page_boxes) * [gr.update(visible=False)], [], main_page_boxes).then(
             lambda  : len(config_section_boxes) * [gr.update(visible=True)], [], config_section_boxes
+        config_button.click(lambda : len(main_page_boxes) * [gr.update(visible=False)], [], main_page_boxes).then(
+            lambda  : len(config_section_boxes) * [gr.update(visible=True)], [], config_section_boxes
         )
         # ==================================================================================
         # Returns
         return_button.click(lambda : len(git_add_select_boxes)* [gr.update(visible=False)], [], git_add_select_boxes).then(
+        return_button.click(lambda : len(git_add_select_boxes)* [gr.update(visible=False)], [], git_add_select_boxes).then(
             fn=update_repo, inputs=[], outputs=[git_box]   
         ).then(
+            lambda :len(main_page_boxes)* [gr.update(visible=True)], [], main_page_boxes
             lambda :len(main_page_boxes)* [gr.update(visible=True)], [], main_page_boxes
         )
         
         file_return_button.click(lambda : len(file_section_boxes)* [gr.update(visible=False)], [], file_section_boxes).then(
+        file_return_button.click(lambda : len(file_section_boxes)* [gr.update(visible=False)], [], file_section_boxes).then(
             fn=update_repo, inputs=[], outputs=[git_box]   
         ).then(
             lambda : len(main_page_boxes)*[gr.update(visible=True)], [], main_page_boxes
+            lambda : len(main_page_boxes)*[gr.update(visible=True)], [], main_page_boxes
         )
         
+        temperature_return_button.click(lambda : len(config_section_boxes)*[gr.update(visible=False)], [], config_section_boxes).then(
+            lambda : len(main_page_boxes)*[gr.update(visible=True)], [], main_page_boxes
+        )
+        
+        branch_submit_return_button.click(lambda : len(config_redirects_boxes)*[gr.update(visible=False)], [], config_redirects_boxes).then(
+            lambda : len(git_add_select_boxes)*[gr.update(visible=True)], [], git_add_select_boxes
         temperature_return_button.click(lambda : len(config_section_boxes)*[gr.update(visible=False)], [], config_section_boxes).then(
             lambda : len(main_page_boxes)*[gr.update(visible=True)], [], main_page_boxes
         )
@@ -295,17 +389,25 @@ def main(args):
             retrival_class._add_following_repo_branches, [git_update_box, branch_update_box, open_ai_key] + branch_redirect_boxes , [] 
         ).then(
             lambda : len(config_redirects_boxes)* [gr.update(visible=False)], [], config_redirects_boxes
+            lambda : len(config_redirects_boxes)* [gr.update(visible=False)], [], config_redirects_boxes
         ).then(
+            fn=update_new_repo, inputs=[git_update_box], outputs=[git_box]
             fn=update_new_repo, inputs=[git_update_box], outputs=[git_box]
         ).then(
             fn=changed_new_repo, inputs=[git_box, branch_update_box], outputs=[version_box]
+            fn=changed_new_repo, inputs=[git_box, branch_update_box], outputs=[version_box]
         ).then(
+            lambda : len(main_page_boxes) *[gr.update(visible=True)], [], main_page_boxes
             lambda : len(main_page_boxes) *[gr.update(visible=True)], [], main_page_boxes
         )
         
         file_add_box.upload(lambda : len(file_section_boxes_no_markdown)*[gr.update(interactive=False)], [], file_section_boxes_no_markdown).then(
+        file_add_box.upload(lambda : len(file_section_boxes_no_markdown)*[gr.update(interactive=False)], [], file_section_boxes_no_markdown).then(
             retrival_class._add_following_zip, [file_add_box], []
         ).then(
+            lambda : len(file_section_boxes_no_markdown) *[gr.update(visible=False,interactive=True)], [], file_section_boxes_no_markdown
+        ).then(
+            lambda : gr.update(visible=False), [], add_file_markdown
             lambda : len(file_section_boxes_no_markdown) *[gr.update(visible=False,interactive=True)], [], file_section_boxes_no_markdown
         ).then(
             lambda : gr.update(visible=False), [], add_file_markdown
@@ -344,7 +446,7 @@ def main(args):
 
         
     with redirect_stdout(sys.stderr):
-        app, local, shared = demo.launch(share=False, server_name='0.0.0.0', server_port=7860)
+        app, local, shared = demo.launch(share=False, server_name='0.0.0.0', server_port=7860, debug=True)
     
 
 if __name__ == "__main__":

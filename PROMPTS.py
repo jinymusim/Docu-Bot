@@ -9,3 +9,4 @@ Answer user QUESTIONS using provided DOCUMENTS below as context. While Answering
 3. Generate your final response after adjusting it to increase accuracy and relevance.
 """
 INPUT_PROMPT = "\nRepos {version} \nDOCUMENTS: {version_context} {shared_context}\nQUESTIONS: {inputs}"
+INPUT_PROMPT = "\nRepos {version} \nDOCUMENTS: {version_context} {shared_context}\nQUESTIONS: {inputs}"
