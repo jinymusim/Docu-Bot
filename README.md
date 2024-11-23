@@ -14,13 +14,15 @@ They are available on Microsoft website [Build Tools](https://visualstudio.micro
 
 Following model was selected as Default models for Embedding.
 
-- Embedding Model: [text-embedding-3-small](https://platform.openai.com/docs/guides/embeddings/embedding-models)
+- Embedding Model: [all-mpnet-base-v1](https://huggingface.co/sentence-transformers/all-mpnet-base-v1)
+- [serve-model](https://github.com/jinymusim/serve-model) project is needed
 
-To change it, rewrite the default value in ***MODEL_TYPES.py***
+To change it, rewrite the default value in ***MODEL_TYPES.py***. For example to `embedding-3-small`
 
 The Default LLM model was seleted as:
 
-- LLM Model: [gpt-3.5-turbo](https://openai.com/blog/gpt-3-5-turbo-fine-tuning-and-api-updates)
+- LLM Model: [Llama-3.2-3B](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct)
+- [serve-model](https://github.com/jinymusim/serve-model)
 
 But this is changable in the ***Config*** section, allowing user to choose OpenAI LLM of their choice.
 
@@ -63,3 +65,8 @@ $env:OPENAI_API_KEY=Company API key
 # Linux
 export OPENAI_API_KEY=Company API key
 ```
+
+### Custom Models
+
+If custom models are to be utilized, follow the [serve-model](https://github.com/jinymusim/serve-model) project and run custom Huggingface models.
+Custom models can be inserted to `MODEL_TYPES.py` with proper `base_url` where the model is served from.
