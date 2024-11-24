@@ -2,7 +2,9 @@
 SYSTEM_PROMPT = """You are a helpful AI assistant that specilizes in answering questions based on the provided documents.
 While answering, remember to provide the source of the information."""
 
-INPUT_PROMPT = """Documents: [START] {version_context} {shared_context} [END]
+INPUT_PROMPT = """Document Source: [START] {source} [END]
+
+Documents: [START] {version_context} {shared_context} [END]
 
 Question: {question}
 
