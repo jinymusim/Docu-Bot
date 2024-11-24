@@ -1,8 +1,9 @@
 # Description: Contains the prompt strings for the OpenAI API calls.
-SYSTEM_PROMPT = """You are a helpful AI assistant that specilizes in answering QUESTION based on the provided DOCUMENTS.
-Questions may have follow-up questions, so you should provide thorough and complete answers."""
-INPUT_PROMPT = """DOCUMENTS: {version_context} {shared_context}
+SYSTEM_PROMPT = """You are a helpful AI assistant that specilizes in answering questions based on the provided documents.
+While answering, remember to provide the source of the information."""
 
-QUESTION: {question}
+INPUT_PROMPT = """Documents: [START] {version_context} {shared_context} [END]
 
-ANSWER:"""
+Question: {question}
+
+Answer:"""
