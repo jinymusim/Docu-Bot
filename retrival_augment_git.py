@@ -58,10 +58,10 @@ class RetrivalAugment:
                     )
         
                 
-        for zip_name in self.cached['cached_shared']:
-            self.shared_documents[zip_name] = EmbeddingsDataset(
-                os.path.join(self.cache_dir, zip_name.removesuffix('.zip')), 
-                cache_dir=os.path.join(self.cache_dir, f'{zip_name.removesuffix(".zip")}-embed'), 
+        for filename in self.cached['cached_shared']:
+            self.shared_documents[filename] = EmbeddingsDataset(
+                os.path.join(self.cache_dir, filename.split('.')[0]), 
+                cache_dir=os.path.join(self.cache_dir, f'{filename.split(".")[0]}-embed'), 
                 transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key='None', base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
             )
       
@@ -268,53 +268,57 @@ class RetrivalAugment:
         # Save the cache list
         json.dump(self.cached, open(self.cache_repo_list, 'w+'), indent=6)
         
-    def _add_following_zip(self, zip_info:str, api_key:str = None):
+    def _add_following_file(self, file_info:str, api_key:str = None):
         #if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
         #    api_key = os.getenv('OPENAI_API_KEY')
         #elif api_key.strip() == '':
         #    return
         api_key = 'API_KEY'
-        _, zip_name = os.path.split(zip_info)
-        # Check if zip file is a zip file and not already cached
-        if not zip_name.endswith('.zip') or zip_name in self.cached['cached_shared']:
-            # Return if not a zip file or already cached
-            os.remove(zip_info)
+        _, filename = os.path.split(file_info)
+        # Check if file and not already cached
+        if filename in self.cached['cached_shared']:
+            # Return if already cached
+            os.remove(file_info)
             return
-        # Process the zip file
+        # Process the file
         else:
-            # Move zip file to cache directory
-            shutil.move(zip_info, os.path.join(self.cache_dir , zip_name))
+            # Move file to cache directory
+            shutil.move(file_info, os.path.join(self.cache_dir , filename))
             try:
+                # Remove cache directory if it exists
+                if os.path.exists(os.path.join(self.cache_dir , filename.split('.')[0])):
+                    shutil.rmtree(os.path.join(self.cache_dir , filename.split('.')[0]))
+                # Create the cache directory for the file
+                os.makedirs(os.path.join(self.cache_dir , filename.split('.')[0]), exist_ok=True)
+                
                 # Open the zip file
-                zf = ZipFile(os.path.join(self.cache_dir , zip_name), 'r') 
-                # Remove zip cache directory if it exists (Bad Zip File Exception)
-                if os.path.exists(os.path.join(self.cache_dir , zip_name.removesuffix('.zip'))):
-                    shutil.rmtree(os.path.join(self.cache_dir , zip_name.removesuffix('.zip')))
-                # Create the cache directory for the zip file
-                os.makedirs(os.path.join(self.cache_dir , zip_name.removesuffix('.zip')), exist_ok=True)
+                if filename.endswith('.zip'):
+                    zf = ZipFile(os.path.join(self.cache_dir , filename), 'r') \
                     
-                filenames = zf.namelist()
-                zf.extractall(os.path.join(self.cache_dir , zip_name.removesuffix('.zip')), members=filenames)
-                # Remove the zip cache directory if it exists
-                if os.path.exists(os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed')):
-                    shutil.rmtree(os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed'))
+                    filenames = zf.namelist()
+                    zf.extractall(os.path.join(self.cache_dir , filename.removesuffix('.zip')), members=filenames)
+                else:
+                    shutil.move(os.path.join(self.cache_dir , filename), os.path.join(self.cache_dir , filename.split('.')[0], filename))
+                    filenames = [filename]
                     
-                self.shared_documents[zip_name] = EmbeddingsDataset(
-                    os.path.join(self.cache_dir , zip_name.removesuffix('.zip')), 
-                    cache_dir=os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed'), 
+                self.shared_documents[filename] = EmbeddingsDataset(
+                    os.path.join(self.cache_dir , filename.split('.')[0]), 
+                    cache_dir=os.path.join(self.cache_dir , f'{filename.split(".")[0]}-embed'), 
                     transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key, base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
                 )
-                self.cached['cached_shared'].append(zip_name)
+                self.cached['cached_shared'].append(filename)
                 # Close the zip file
-                zf.close()
-                # Remove the zip file
-                os.remove(os.path.join(self.cache_dir , zip_name))
-            # If zip file is corrupted  
+                if filename.endswith('.zip'):
+                    zf.close()
+                    # Remove the file
+                    os.remove(os.path.join(self.cache_dir , filename))
+                
+            # If file is corrupted  
             except Exception as e:
                 # Print the error
                 print(e)
-                # Remove the zip file
-                os.remove(os.path.join(self.cache_dir , zip_name))
+                # Remove the file
+                os.remove(os.path.join(self.cache_dir , filename))
         # Save the cache list     
         json.dump(self.cached, open(self.cache_repo_list, 'w+'), indent=6)
         
@@ -380,8 +384,9 @@ class RetrivalAugment:
         # Get most relevant documents for given repos and versions
         for i, user_in in enumerate(copied_inputs):
             if user_in['role'] == 'user':
+                copied_inputs[i]['docs'] = []
+                
                 for repo in git_repos:
-                    copied_inputs[i]['docs'] = []
             
                     _, repo_rel_name = os.path.split(repo.removesuffix('.git'))
                     repo_dir = os.path.dirname(repo)
@@ -404,7 +409,7 @@ class RetrivalAugment:
                 
                 for share in shared:
                     # Get the relevant documents
-                    copied_inputs[i]['shared'] += self.shared_documents[share].querry_documents(
+                    copied_inputs[i]['shared'] += self.shared_documents[share].querry_documents_small(
                         f"{'' if (versions==None or len(versions) == 0) else versions}\n{user_in['content']}", 
                         k=max(1, CONTEXT_SIZE.SHARED_DOCUMENTS//len(shared)), 
                         fetch_k=max(1, CONTEXT_SIZE.SHARED_DIVERSE_K//len(shared))

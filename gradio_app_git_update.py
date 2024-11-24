@@ -169,7 +169,7 @@ def main(args):
                                         Add files to the shared directory.
                                         """, visible=False)
         
-        file_add_box = gr.File(file_count='single', file_types=['file'], interactive=True, visible=False, label='Zip Uploader')
+        file_add_box = gr.File(file_count='single', file_types=['file'], interactive=True, visible=False, label='Zip and File Uploader')
         file_return_button = gr.Button('Return', variant='secondary', visible=False)
         
         file_section_boxes = [file_add_box, file_return_button, add_file_markdown]
@@ -303,7 +303,7 @@ def main(args):
         )
         
         file_add_box.upload(lambda : len(file_section_boxes_no_markdown)*[gr.update(interactive=False)], [], file_section_boxes_no_markdown).then(
-            retrival_class._add_following_zip, [file_add_box], []
+            retrival_class._add_following_file, [file_add_box], []
         ).then(
             lambda : len(file_section_boxes_no_markdown) *[gr.update(visible=False,interactive=True)], [], file_section_boxes_no_markdown
         ).then(
