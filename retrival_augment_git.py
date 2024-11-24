@@ -425,8 +425,8 @@ class RetrivalAugment:
             messages.append({
                 "role": one_input['role'],
                 "content": one_input['content'] if role == 'assistant' else PROMPTS.INPUT_PROMPT.format( 
-                    version_context="\n".join(one_input['docs']), 
-                    shared_context="\n".join(one_input['shared']), 
+                    version_context="\n".join([str(doc) for doc in one_input['docs']]), 
+                    shared_context="\n".join([str(sh) for sh in  one_input['shared']]), 
                     question=one_input['content']
                 )
             })

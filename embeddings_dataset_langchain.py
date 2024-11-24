@@ -100,7 +100,7 @@ class EmbeddingsDataset(Dataset):
         doc_dict = {
             'filename' : filename_rel_path,
             'branch' : self.branch,
-            'data' : document.page_content
+            'content' : document.page_content
         }
         
         return doc_dict
@@ -147,7 +147,7 @@ class EmbeddingsDataset(Dataset):
         for document in documents:
             with open(document.metadata['source'], 'r', encoding='utf-8', errors='replace') as file:
                 filename = os.path.relpath(document.metadata['source'], self.source_dir)
-                full_documents.append({'filename': filename, 'data' : file.read()})
+                full_documents.append({'filename': filename, 'content' : file.read()})
         
         return full_documents
     
@@ -156,7 +156,7 @@ class EmbeddingsDataset(Dataset):
         full_documents = []
         for document in documents:
             filename = os.path.relpath(document.metadata['source'], self.source_dir)
-            full_documents.append({'filename': filename, 'data' : document.page_content})
+            full_documents.append({'filename': filename, 'content' : document.page_content})
         
         return full_documents
         
