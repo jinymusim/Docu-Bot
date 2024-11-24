@@ -105,6 +105,9 @@ def main(args):
         return gr.update(choices=retrival_class._get_cached_shared(), 
                             value=[], interactive=True)
         
+    def user_input(user_input:str, history:list):
+        return "", history + [{"role":"user", "content":user_input}]
+        
     with demo:
         
         # ===================================================================
@@ -115,7 +118,7 @@ def main(args):
         branch_redirect_boxes = [gr.Textbox(label=f'TEXTBOX {i}', value='', visible=False, max_lines=1, interactive=True) for i in range(args.max_branch_boxes)]
         with gr.Row():
             with gr.Column():
-                branch_submit_return_button = gr.Button('Return', variant='seconday', visible=False,  interactive=True)
+                branch_submit_return_button = gr.Button('Return', variant='secondary', visible=False, interactive=True)
             with gr.Column():
                 branch_submit_button = gr.Button('Submit Branches', variant='primary', visible=False)
                 
@@ -134,7 +137,7 @@ def main(args):
         git_update_box = gr.Dropdown(choices=retrival_class._get_cached_repos(), allow_custom_value=True, visible=False, interactive=True, label='Git Repository Input')
         with gr.Row():
             with gr.Column():
-                return_button = gr.Button('Return', variant='seconday', visible=False,  interactive=True)
+                return_button = gr.Button('Return', variant='secondary', visible=False, interactive=True)
             with gr.Column():
                 git_submit_button = gr.Button('Submit Repo', variant='primary', visible=False)
         branch_update_box = gr.Dropdown(visible=False, multiselect=True, interactive=True, label='Branches to Cache',max_choices=args.max_branch_boxes)
@@ -180,10 +183,10 @@ def main(args):
             Configure the OpenAI model, temperature and the system prompt.
             """, visible=False)
         
-        change_temperature = gr.Slider(minimum=0.05, maximum=2.0, step=0.05, value=0.2, label='Temperature, Default = 0.2', interactive=True, visible=False)
+        change_temperature = gr.Slider(minimum=0.05, maximum=2.0, step=0.05, value=0.7, label='Temperature, Default = 0.7', interactive=True, visible=False)
         change_system_prompt = gr.Textbox(label='System Prompt',value=PROMPTS.SYSTEM_PROMPT, visible=False, interactive=True, lines=10, max_lines=10)
         open_ai_model = gr.Dropdown(choices=list(MODEL_TYPES.LLM_MODELS.keys()), value=list(MODEL_TYPES.LLM_MODELS.keys())[-1], label='Chosen Model', visible=False, interactive=True)
-        open_ai_key = gr.Textbox(label='OpenAI API Key', visible=False, interactive=True, lines=1, max_lines=1)
+        open_ai_key = gr.Textbox(label='OpenAI API Key', value='metacentrum', placeholder='metacentrum' ,visible=False, interactive=True, lines=1, max_lines=1)
         
         with gr.Row():
             with gr.Column():
@@ -196,7 +199,7 @@ def main(args):
                                 change_temperature, change_system_prompt, open_ai_model, open_ai_key]
                 
         ## Config Section UI controll
-        reset_button.click(lambda : [gr.update(value=0.2), gr.update(value=PROMPTS.SYSTEM_PROMPT)], [], [change_temperature, change_system_prompt])    
+        reset_button.click(lambda : [gr.update(value=0.7), gr.update(value=PROMPTS.SYSTEM_PROMPT)], [], [change_temperature, change_system_prompt])    
         
                 
         # ==================================================================================
@@ -218,7 +221,7 @@ def main(args):
                                           interactive=True, multiselect=True, visible=False)
                 shared_box = gr.Dropdown(choices=retrival_class._get_cached_shared(), interactive=True, visible=False, multiselect=True, label='Additional Files')
                 
-                question_box = gr.Textbox(label='Question about documents', lines=12, interactive=True, visible=False)
+                question_box = gr.Textbox(label='Question about documents', lines=4, interactive=True, visible=False)
                 submit_button = gr.Button('Submit Question', variant='primary', interactive=True, visible=False)
                 with gr.Row():
                     with gr.Column():
@@ -227,27 +230,27 @@ def main(args):
                         add_file = gr.Button('Add Additional Directory', variant='secondary', interactive=True, visible=False)
                 config_button = gr.Button('Config', variant='secondary', interactive=True, visible=False)
             with gr.Column():
-                submited_question_box = gr.Textbox(label='Submited Question', lines=3, interactive=False, visible=False)
-                answer_box = gr.Textbox(label='Answer', lines=9, interactive=False, visible=False) 
+                chatbot_box = gr.Chatbot(type="messages", label='Answer', visible=False, height=None, min_height=400, max_height=1200, show_label=False) 
+                clear_history = gr.Button('Clear History', variant='secondary', interactive=True, visible=False)
                 documents = gr.Markdown(visible=False)
         
         main_page_boxes = [main_page_markdown, git_box, version_box, shared_box, question_box, submit_button, add_repo, 
-                           add_file, config_button, submited_question_box, answer_box, documents]    
+                           add_file, config_button, chatbot_box, clear_history, documents]    
         
         ## Main section UI controll
         git_box.change(fn=changed_repo, inputs=[git_box], outputs=[version_box])
         
         branch_update_box.change(fn=changed_branches, inputs=[branch_update_box], outputs=[branch_redirect_update_button, branch_quick_submit_button])
         
-        submit_button.click(lambda x: x, [question_box], [submited_question_box]).then(
-            lambda : gr.update(value=''), [],[question_box]
+        submit_button.click(user_input, [question_box, chatbot_box], [question_box, chatbot_box]).then(
+            retrival_class._get_relevant_docs, inputs=[git_box, version_box, chatbot_box], outputs=[documents]
         ).then(
-            retrival_class._get_relevant_docs, inputs=[git_box, version_box, submited_question_box], outputs=[documents]
+            retrival_class.__call__, inputs=[git_box,version_box, chatbot_box, shared_box, change_temperature, open_ai_key, open_ai_model, change_system_prompt], outputs=[chatbot_box]
         ).then(
-            retrival_class.__call__, inputs=[git_box,version_box, submited_question_box, shared_box, change_temperature, open_ai_key, open_ai_model, change_system_prompt], outputs=[answer_box]
-        ).then(
-            lambda *args: callback.flag(args), [version_box, git_box, submited_question_box, answer_box, shared_box, open_ai_model, change_temperature, change_system_prompt], []
+            lambda *args: callback.flag(args), [version_box, git_box, chatbot_box, shared_box, open_ai_model, change_temperature, change_system_prompt], []
         )
+        
+        clear_history.click(lambda : gr.update(value=[]), [], chatbot_box)
         
         add_repo.click(lambda :len(main_page_boxes) * [gr.update(visible=False)], [], main_page_boxes).then(
             fn=update_repo, inputs=[], outputs=[git_update_box]
@@ -327,7 +330,7 @@ def main(args):
         
         # ==================================================================================
         # Setup Section  
-        callback.setup([version_box, git_box, submited_question_box, answer_box, shared_box, open_ai_model, change_temperature, change_system_prompt], "flagged_data_points_all")
+        callback.setup([version_box, git_box, chatbot_box, shared_box, open_ai_model, change_temperature, change_system_prompt], "flagged_data_points_all")
 
         ## Setup section controll
         demo.load(fn=update_repo, inputs=[], outputs=[git_box]).then(

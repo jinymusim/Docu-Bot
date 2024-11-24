@@ -5,38 +5,15 @@ from torch.utils.data import Dataset
 #sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
-#from langchain.document_loaders.directory import DirectoryLoader
-#from langchain.document_loaders.text import TextLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
 from langchain_chroma import Chroma
-#from langchain.vectorstores.chroma import Chroma
 from langchain_openai import  OpenAIEmbeddings
 from fuzzywuzzy import fuzz
 
 import os
-import torch
-
-#Mean Pooling - Take attention mask into account for correct averaging
-def mean_pooling(model_output, attention_mask):
-    token_embeddings = model_output[0] #First element of model_output contains all token embeddings
-    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-    return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 EMBED_STEP = 256
-
-
-#class MyEmbeddingFunction(EmbeddingFunction):
-#    def __init__(self, model_name='sentence-transformers/all-MiniLM-L6-v2') -> None:
-#        super().__init__()
-#        self.transformer = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=model_name)
-#        
-#    def __call__(self, input: Documents) -> Embeddings:
-#        # embed the documents somehow
-#        return self.transformer(input)
-#    
-#    def embed_documents(self, input: Documents):
-#        return self.__call__(input)
 
 class EmbeddingsDataset(Dataset):
     def __init__(self, datasource_directory, transformer_model: OpenAIEmbeddings, cache_dir =os.path.join(os.path.dirname(__file__), "chroma-embed-cache") ):
