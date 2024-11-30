@@ -1,5 +1,6 @@
 from embeddings_dataset_langchain import EmbeddingsDataset
 from langchain_openai import  OpenAIEmbeddings
+from langchain_community.document_transformers  import LongContextReorder
 from openai import OpenAI
 from zipfile import ZipFile, BadZipFile
 import PROMPTS
@@ -380,6 +381,7 @@ class RetrivalAugment:
             return
         
         copied_inputs = inputs.copy()
+        open_api = OpenAI(api_key=api_key, base_url=MODEL_TYPES.LLM_MODELS[model])
         
         # Get most relevant documents for given repos and versions
         for i, user_in in enumerate(copied_inputs):
@@ -396,11 +398,36 @@ class RetrivalAugment:
                         if f"{repo_rel_dir}/{repo_rel_name}" in version:
                             _, true_ver = os.path.split(version)
                             # Get the relevant documents
-                            copied_inputs[i]['docs'] += self.version_specific_documents[repo][true_ver](
+                            for doc in self.version_specific_documents[repo][true_ver](
                                 user_in['content'], 
-                                k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), 
-                                fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions))
-                            )
+                                k=CONTEXT_SIZE.GIT_TO_RANK//len(versions), 
+                                fetch_k=CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)
+                            ):
+                                # Rerank the documents
+                                rank_out = open_api.chat.completions.create(
+                                   model=model,
+                                    messages=[
+                                        {
+                                            'role': 'user',
+                                            'content': PROMPTS.RERANK_PROMPT.format(
+                                                query=user_in['content'], 
+                                                document=doc['content']
+                                            )
+                                        }
+                                    ],
+                                    max_tokens=1,
+                                    temperature=0.2,
+                                    logprobs=True
+                                )
+                                if rank_out.choices[0].logprobs.to_dict().get('Yes') is not None:
+                                    copied_inputs[i]['docs'].append((doc, rank_out.choices[0].logprobs.to_dict().get('Yes')))
+                    copied_inputs[i]['docs'] += sorted(copied_inputs[i]['docs'], key=lambda x: x[1], reverse=True)[:max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions))]
+                
+                copied_inputs[i]['docs'] = sorted(copied_inputs[i]['docs'], key=lambda x: x[1], reverse=True)[:CONTEXT_SIZE.GIT_DOCUMENTS]
+                copied_inputs[i]['docs'] = list(map(lambda x: x[0], copied_inputs[i]['docs']))
+                reordering = LongContextReorder()
+                copied_inputs[i]['docs'] = reordering.transform_documents(copied_inputs[i]['docs'])
+
                             
         # Get most relevant documents for shared documents
         for i, user_in in enumerate(copied_inputs):
@@ -409,12 +436,35 @@ class RetrivalAugment:
                 
                 for share in shared:
                     # Get the relevant documents
-                    copied_inputs[i]['shared'] += self.shared_documents[share].querry_documents_small(
-                        f"{'' if (versions==None or len(versions) == 0) else versions}\n{user_in['content']}", 
-                        k=max(1, CONTEXT_SIZE.SHARED_DOCUMENTS//len(shared)), 
-                        fetch_k=max(1, CONTEXT_SIZE.SHARED_DIVERSE_K//len(shared))
-                    )
-        
+                    for doc in self.shared_documents[share].querry_documents_small(
+                        user_in['content'], 
+                        k=CONTEXT_SIZE.SHARED_TO_RANK//len(shared), 
+                        fetch_k=CONTEXT_SIZE.SHARED_DIVERSE_K//len(shared)
+                    ):
+                        # Rerank the documents
+                        rank_out = open_api.chat.completions.create(
+                            model=model,
+                            messages=[
+                                {
+                                    'role': 'user',
+                                    'content': PROMPTS.RERANK_PROMPT.format(
+                                        query=user_in['content'], 
+                                        document=doc['content']
+                                    )
+                                }
+                            ],
+                            max_tokens=1,
+                            temperature=0.2,
+                            logprobs=True
+                        )
+                        if rank_out.choices[0].logprobs.to_dict().get('Yes') is not None:
+                            copied_inputs[i]['shared'].append((doc, rank_out.choices[0].logprobs.to_dict().get('Yes', float('-inf'))))
+                    copied_inputs[i]['shared'] += sorted(copied_inputs[i]['shared'], key=lambda x: x[1], reverse=True)[:max(1, CONTEXT_SIZE.SHARED_DOCUMENTS//len(shared))]
+                copied_inputs[i]['shared'] = sorted(copied_inputs[i]['shared'], key=lambda x: x[1], reverse=True)[:CONTEXT_SIZE.SHARED_DOCUMENTS]
+                copied_inputs[i]['shared'] = list(map(lambda x: x[0], copied_inputs[i]['shared']))
+                reordering = LongContextReorder()
+                copied_inputs[i]['shared'] = reordering.transform_documents(copied_inputs[i]['shared'])
+
         messages = [
             {
                 'role' : 'system',
@@ -431,7 +481,7 @@ class RetrivalAugment:
                     question=one_input['content']
                 )
             })
-        open_api = OpenAI(api_key=api_key, base_url=MODEL_TYPES.LLM_MODELS[model])
+        
         completion = open_api.chat.completions.create(
             model=model,
             messages=messages,

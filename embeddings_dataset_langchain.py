@@ -34,20 +34,20 @@ class EmbeddingsDataset(Dataset):
         if not exist:
         
             data_sources_splitter_pairs = [
-                ('*.md',  {'language': Language.MARKDOWN ,'chunk_size' : 1000, 'chunk_overlap'  : 300, 'length_function' : len,}),
-                ('*.rst',  {'language': Language.RST, 'chunk_size' : 1000, 'chunk_overlap'  : 300, 'length_function' : len,}),
-                ('*.txt',  {'splitter':RecursiveCharacterTextSplitter, 'chunk_size' : 1000, 'chunk_overlap'  : 300, 'length_function' : len,}),
+                ('*.md',  {'language': Language.MARKDOWN ,'chunk_size' : 512, 'chunk_overlap'  : 128, 'length_function' : len,}),
+                ('*.rst',  {'language': Language.RST, 'chunk_size' : 512, 'chunk_overlap'  : 128, 'length_function' : len,}),
+                ('*.txt',  {'splitter':RecursiveCharacterTextSplitter, 'chunk_size' : 512, 'chunk_overlap'  : 128, 'length_function' : len,}),
                 ('*.pdf', {
                     'splitter': RecursiveCharacterTextSplitter, 
-                    'chunk_size' : 1000, 
-                    'chunk_overlap'  : 300,
+                    'chunk_size' : 512, 
+                    'chunk_overlap'  : 128,
                     'length_function' : len, 
                     'loader_cls' : PyPDFLoader,
                     'loader_kwargs' : {'extraction_kwargs' : {'autodetect_encoding': True, "encoding": 'utf-8'} }
                     }),
-                ('*.py', {'language': Language.PYTHON, 'chunk_size' : 1000, 'chunk_overlap'  : 150, 'length_function' : len,}),
-                ('*.html', {'language': Language.HTML, 'chunk_size' : 1000, 'chunk_overlap'  : 300, 'length_function' : len,}),
-                ('*.tex', {'language': Language.LATEX, 'chunk_size' : 1000, 'chunk_overlap'  : 300, 'length_function' : len,}),
+                ('*.py', {'language': Language.PYTHON, 'chunk_size' : 512, 'chunk_overlap'  : 128, 'length_function' : len,}),
+                ('*.html', {'language': Language.HTML, 'chunk_size' : 512, 'chunk_overlap'  : 128, 'length_function' : len,}),
+                ('*.tex', {'language': Language.LATEX, 'chunk_size' : 512, 'chunk_overlap'  : 128, 'length_function' : len,}),
             ]
             
 
