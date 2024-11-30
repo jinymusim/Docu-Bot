@@ -1,34 +1,16 @@
 from embeddings_dataset_langchain import EmbeddingsDataset
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer, TextIteratorStreamer
-
 from langchain_openai import  OpenAIEmbeddings
 from openai import OpenAI
-from threading import Thread
 from zipfile import ZipFile, BadZipFile
 import PROMPTS
 import MODEL_TYPES
 import CONTEXT_SIZE
 import os
-import torch
 import json
 import git
 import subprocess
-import importlib.util
 import argparse
 import shutil
-
-
-def supports_flash_attention():
-    """Check if a GPU supports FlashAttention."""
-    major, minor = torch.cuda.get_device_capability(0)
-    
-    flash_attention = False if  importlib.util.find_spec('flash_attn') is None else True
-    
-    # Check if the GPU architecture is Ampere (SM 8.x) or newer (SM 9.x)
-    is_sm8x = major == 8 and minor >= 0
-    is_sm9x = major == 9 and minor >= 0
-
-    return (is_sm8x or is_sm9x) and flash_attention
 
 class RetrivalAugment:
     
@@ -76,10 +58,10 @@ class RetrivalAugment:
                     )
         
                 
-        for zip_name in self.cached['cached_shared']:
-            self.shared_documents[zip_name] = EmbeddingsDataset(
-                os.path.join(self.cache_dir, zip_name.removesuffix('.zip')), 
-                cache_dir=os.path.join(self.cache_dir, f'{zip_name.removesuffix(".zip")}-embed'), 
+        for filename in self.cached['cached_shared']:
+            self.shared_documents[filename] = EmbeddingsDataset(
+                os.path.join(self.cache_dir, filename.split('.')[0]), 
+                cache_dir=os.path.join(self.cache_dir, f'{filename.split(".")[0]}-embed'), 
                 transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key='None', base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
             )
       
@@ -286,57 +268,61 @@ class RetrivalAugment:
         # Save the cache list
         json.dump(self.cached, open(self.cache_repo_list, 'w+'), indent=6)
         
-    def _add_following_zip(self, zip_info:str, api_key:str = None):
+    def _add_following_file(self, file_info:str, api_key:str = None):
         #if api_key.strip() == '' and 'OPENAI_API_KEY' in os.environ.keys() and os.getenv('OPENAI_API_KEY').strip() != '':
         #    api_key = os.getenv('OPENAI_API_KEY')
         #elif api_key.strip() == '':
         #    return
         api_key = 'API_KEY'
-        _, zip_name = os.path.split(zip_info)
-        # Check if zip file is a zip file and not already cached
-        if not zip_name.endswith('.zip') or zip_name in self.cached['cached_shared']:
-            # Return if not a zip file or already cached
-            os.remove(zip_info)
+        _, filename = os.path.split(file_info)
+        # Check if file and not already cached
+        if filename in self.cached['cached_shared']:
+            # Return if already cached
+            os.remove(file_info)
             return
-        # Process the zip file
+        # Process the file
         else:
-            # Move zip file to cache directory
-            shutil.move(zip_info, os.path.join(self.cache_dir , zip_name))
+            # Move file to cache directory
+            shutil.move(file_info, os.path.join(self.cache_dir , filename))
             try:
+                # Remove cache directory if it exists
+                if os.path.exists(os.path.join(self.cache_dir , filename.split('.')[0])):
+                    shutil.rmtree(os.path.join(self.cache_dir , filename.split('.')[0]))
+                # Create the cache directory for the file
+                os.makedirs(os.path.join(self.cache_dir , filename.split('.')[0]), exist_ok=True)
+                
                 # Open the zip file
-                zf = ZipFile(os.path.join(self.cache_dir , zip_name), 'r') 
-                # Remove zip cache directory if it exists (Bad Zip File Exception)
-                if os.path.exists(os.path.join(self.cache_dir , zip_name.removesuffix('.zip'))):
-                    shutil.rmtree(os.path.join(self.cache_dir , zip_name.removesuffix('.zip')))
-                # Create the cache directory for the zip file
-                os.makedirs(os.path.join(self.cache_dir , zip_name.removesuffix('.zip')), exist_ok=True)
+                if filename.endswith('.zip'):
+                    zf = ZipFile(os.path.join(self.cache_dir , filename), 'r') \
                     
-                filenames = zf.namelist()
-                zf.extractall(os.path.join(self.cache_dir , zip_name.removesuffix('.zip')), members=filenames)
-                # Remove the zip cache directory if it exists
-                if os.path.exists(os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed')):
-                    shutil.rmtree(os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed'))
+                    filenames = zf.namelist()
+                    zf.extractall(os.path.join(self.cache_dir , filename.removesuffix('.zip')), members=filenames)
+                else:
+                    shutil.move(os.path.join(self.cache_dir , filename), os.path.join(self.cache_dir , filename.split('.')[0], filename))
+                    filenames = [filename]
                     
-                self.shared_documents[zip_name] = EmbeddingsDataset(
-                    os.path.join(self.cache_dir , zip_name.removesuffix('.zip')), 
-                    cache_dir=os.path.join(self.cache_dir , f'{zip_name.removesuffix(".zip")}-embed'), 
+                self.shared_documents[filename] = EmbeddingsDataset(
+                    os.path.join(self.cache_dir , filename.split('.')[0]), 
+                    cache_dir=os.path.join(self.cache_dir , f'{filename.split(".")[0]}-embed'), 
                     transformer_model=OpenAIEmbeddings(model=MODEL_TYPES.DEFAULT_EMBED_MODEL, api_key=api_key, base_url=MODEL_TYPES.DEFAULT_EMBED_LOC)
                 )
-                self.cached['cached_shared'].append(zip_name)
+                self.cached['cached_shared'].append(filename)
                 # Close the zip file
-                zf.close()
-                # Remove the zip file
-                os.remove(os.path.join(self.cache_dir , zip_name))
-            # If zip file is corrupted  
+                if filename.endswith('.zip'):
+                    zf.close()
+                    # Remove the file
+                    os.remove(os.path.join(self.cache_dir , filename))
+                
+            # If file is corrupted  
             except Exception as e:
                 # Print the error
                 print(e)
-                # Remove the zip file
-                os.remove(os.path.join(self.cache_dir , zip_name))
+                # Remove the file
+                os.remove(os.path.join(self.cache_dir , filename))
         # Save the cache list     
         json.dump(self.cached, open(self.cache_repo_list, 'w+'), indent=6)
         
-    def _get_relevant_docs(self, git_repos: list[str], versions: list[str], inputs) -> str:
+    def _get_relevant_docs(self, git_repos: list[str], versions: list[str], inputs: list[str]) -> str:
         
         result_string = "### Most Relevant Documents"
         # Iterate over all repositories
@@ -353,7 +339,7 @@ class RetrivalAugment:
                 if f"{repo_rel_dir}/{repo_rel_name}" in version:
                     _, true_ver = os.path.split(version)    
                     relevant_docs = (self.version_specific_documents[repo][true_ver]).relevant_docs_filename(
-                        inputs, 
+                        inputs[-1]['content'], 
                         k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), 
                         fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions))
                     )
@@ -382,7 +368,7 @@ class RetrivalAugment:
         return result_string
                            
             
-    def __call__(self, git_repos: list[str] = None, versions= None, inputs = '', shared=None, temperature: float= 0.2, api_key:str = None, model:str = 'gpt-3.5-turbo', system_prompt:str = PROMPTS.SYSTEM_PROMPT):    
+    def __call__(self, git_repos: list[str] = None, versions= None, inputs: list[str] = None, shared=None, temperature: float= 0.7, api_key:str = None, model:str = 'gpt-3.5-turbo', system_prompt:str = PROMPTS.SYSTEM_PROMPT):    
         if len(git_repos) == 0 and len(shared) == 0:
             yield 'I was not given any documentation path to work from.'
             return
@@ -393,55 +379,69 @@ class RetrivalAugment:
             yield "No API Key Provided"
             return
         
+        copied_inputs = inputs.copy()
         
-        version_context = []
         # Get most relevant documents for given repos and versions
-        for repo in git_repos:
+        for i, user_in in enumerate(copied_inputs):
+            if user_in['role'] == 'user':
+                copied_inputs[i]['docs'] = []
+                
+                for repo in git_repos:
             
-            _, repo_rel_name = os.path.split(repo.removesuffix('.git'))
-            repo_dir = os.path.dirname(repo)
-            _, repo_rel_dir =  os.path.split(repo_dir)
-            
-            for version in versions:
-                if f"{repo_rel_dir}/{repo_rel_name}" in version:
-                    _, true_ver = os.path.split(version)
-                    # Get the relevant documents
-                    version_context += self.version_specific_documents[repo][true_ver](inputs, 
-                                                    k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), 
-                                                    fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions)))
-         
-        shared_context = []
+                    _, repo_rel_name = os.path.split(repo.removesuffix('.git'))
+                    repo_dir = os.path.dirname(repo)
+                    _, repo_rel_dir =  os.path.split(repo_dir)
+
+                    for version in versions:
+                        if f"{repo_rel_dir}/{repo_rel_name}" in version:
+                            _, true_ver = os.path.split(version)
+                            # Get the relevant documents
+                            copied_inputs[i]['docs'] += self.version_specific_documents[repo][true_ver](
+                                user_in['content'], 
+                                k=max(1, CONTEXT_SIZE.GIT_DOCUMENTS//len(versions)), 
+                                fetch_k=max(1, CONTEXT_SIZE.GIT_DIVERSE_K//len(versions))
+                            )
+                            
         # Get most relevant documents for shared documents
-        for share in shared:
-            # Get the relevant documents
-            shared_context += self.shared_documents[share].querry_documents(f"{'' if (versions==None or len(versions) == 0)  else versions}\n{inputs}", 
-                                                                            k=max(1, CONTEXT_SIZE.SHARED_DOCUMENTS//len(shared)), 
-                                                                            fetch_k=max(1, CONTEXT_SIZE.SHARED_DIVERSE_K//len(shared)))      
+        for i, user_in in enumerate(copied_inputs):
+            if user_in['role'] == 'user':
+                copied_inputs[i]['shared'] = []
+                
+                for share in shared:
+                    # Get the relevant documents
+                    copied_inputs[i]['shared'] += self.shared_documents[share].querry_documents_small(
+                        f"{'' if (versions==None or len(versions) == 0) else versions}\n{user_in['content']}", 
+                        k=max(1, CONTEXT_SIZE.SHARED_DOCUMENTS//len(shared)), 
+                        fetch_k=max(1, CONTEXT_SIZE.SHARED_DIVERSE_K//len(shared))
+                    )
+        
         messages = [
             {
                 'role' : 'system',
                 'content' : system_prompt
-            },
-            {
-                "role": "user",
-                "content":  PROMPTS.INPUT_PROMPT.format(version=versions, 
-                                                            version_context=version_context, 
-                                                            shared_context=shared_context, 
-                                                            inputs=inputs)
-            },
-        ] 
+            }]
+        for one_input in copied_inputs:
+            role = one_input['role']
+            messages.append({
+                "role": one_input['role'],
+                "content": one_input['content'] if role == 'assistant' else PROMPTS.INPUT_PROMPT.format( 
+                    source="\n".join(git_repos + (shared if shared != None else [])),
+                    version_context="\n".join([str(doc) for doc in one_input['docs']]), 
+                    shared_context="\n".join([str(sh) for sh in  one_input['shared']]), 
+                    question=one_input['content']
+                )
+            })
         open_api = OpenAI(api_key=api_key, base_url=MODEL_TYPES.LLM_MODELS[model])
         completion = open_api.chat.completions.create(
             model=model,
             messages=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             stream=True,
-            temperature=float(temperature) if (temperature != None and temperature > 0)  else 0.2,
+            temperature=float(temperature) if (temperature != None and temperature > 0)  else 0.7,
         )
         
-        partial_message = ""
+        inputs.append({'role': 'assistant', 'content': ''})
         for chunk in completion:
-            partial_message += chunk.choices[0].delta.content if chunk.choices[0].delta.content != None else ''
-            yield partial_message
-
+            inputs[-1]['content'] += chunk.choices[0].delta.content if chunk.choices[0].delta.content != None else ''
+            yield inputs
     

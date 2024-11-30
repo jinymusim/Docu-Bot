@@ -1,11 +1,7 @@
 gradio
-transformers
 langchain
 chromadb
-sentence_transformers
 fuzzywuzzy
-bitsandbytes
-accelerate
 packaging
 wheel
 ninja
@@ -14,3 +10,4 @@ langchain-openai
 langchain-chroma
 langchain-community
 openai
+pypdf

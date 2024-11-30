@@ -4,8 +4,6 @@
 #
 #    pip-compile '.\requirements.in'
 #
-accelerate==1.1.1
-    # via -r .\requirements.in
 aiofiles==23.2.1
     # via gradio
 aiohappyeyeballs==2.4.3
@@ -33,8 +31,6 @@ backoff==2.2.1
     # via posthog
 bcrypt==4.2.0
     # via chromadb
-bitsandbytes==0.44.1
-    # via -r .\requirements.in
 build==1.2.2.post1
     # via chromadb
 cachetools==5.5.0
@@ -84,10 +80,7 @@ fastapi==0.115.5
 ffmpy==0.4.0
     # via gradio
 filelock==3.16.1
-    # via
-    #   huggingface-hub
-    #   torch
-    #   transformers
+    # via huggingface-hub
 flatbuffers==24.3.25
     # via onnxruntime
 frozenlist==1.5.0
@@ -98,7 +91,6 @@ fsspec==2024.10.0
     # via
     #   gradio-client
     #   huggingface-hub
-    #   torch
 fuzzywuzzy==0.18.0
     # via -r .\requirements.in
 gitdb==4.0.11
@@ -139,12 +131,9 @@ httpx-sse==0.4.0
     # via langchain-community
 huggingface-hub==0.26.2
     # via
-    #   accelerate
     #   gradio
     #   gradio-client
-    #   sentence-transformers
     #   tokenizers
-    #   transformers
 humanfriendly==10.0
     # via coloredlogs
 idna==3.10
@@ -158,13 +147,9 @@ importlib-metadata==8.5.0
 importlib-resources==6.4.5
     # via chromadb
 jinja2==3.1.4
-    # via
-    #   gradio
-    #   torch
+    # via gradio
 jiter==0.7.1
     # via openai
-joblib==1.4.2
-    # via scikit-learn
 jsonpatch==1.33
     # via langchain-core
 jsonpointer==3.0.0
@@ -217,14 +202,10 @@ multidict==6.1.0
     #   yarl
 mypy-extensions==1.0.0
     # via typing-inspect
-networkx==3.4.2
-    # via torch
 ninja==1.11.1.1
     # via -r .\requirements.in
 numpy==1.26.4
     # via
-    #   accelerate
-    #   bitsandbytes
     #   chroma-hnswlib
     #   chromadb
     #   gradio
@@ -233,9 +214,6 @@ numpy==1.26.4
     #   langchain-community
     #   onnxruntime
     #   pandas
-    #   scikit-learn
-    #   scipy
-    #   transformers
 oauthlib==3.2.2
     # via
     #   kubernetes
@@ -295,7 +273,6 @@ overrides==7.7.0
 packaging==24.2
     # via
     #   -r .\requirements.in
-    #   accelerate
     #   build
     #   gradio
     #   gradio-client
@@ -304,13 +281,10 @@ packaging==24.2
     #   marshmallow
     #   onnxruntime
     #   opentelemetry-instrumentation
-    #   transformers
 pandas==2.2.3
     # via gradio
 pillow==11.0.0
-    # via
-    #   gradio
-    #   sentence-transformers
+    # via gradio
 posthog==3.7.0
     # via chromadb
 propcache==0.2.0
@@ -320,8 +294,6 @@ protobuf==5.28.3
     #   googleapis-common-protos
     #   onnxruntime
     #   opentelemetry-proto
-psutil==6.1.0
-    # via accelerate
 pyasn1==0.6.1
     # via
     #   pyasn1-modules
@@ -346,6 +318,8 @@ pydub==0.25.1
     # via gradio
 pygments==2.18.0
     # via rich
+pypdf==5.1.0
+    # via -r .\requirements.in
 pypika==0.48.9
     # via chromadb
 pyproject-hooks==1.2.0
@@ -367,7 +341,6 @@ pytz==2024.2
     # via pandas
 pyyaml==6.0.2
     # via
-    #   accelerate
     #   chromadb
     #   gradio
     #   huggingface-hub
@@ -375,12 +348,9 @@ pyyaml==6.0.2
     #   langchain
     #   langchain-community
     #   langchain-core
-    #   transformers
     #   uvicorn
 regex==2024.11.6
-    # via
-    #   tiktoken
-    #   transformers
+    # via tiktoken
 requests==2.32.3
     # via
     #   huggingface-hub
@@ -392,7 +362,6 @@ requests==2.32.3
     #   requests-oauthlib
     #   requests-toolbelt
     #   tiktoken
-    #   transformers
 requests-oauthlib==2.0.0
     # via kubernetes
 requests-toolbelt==1.0.0
@@ -407,20 +376,8 @@ ruff==0.7.3
     # via gradio
 safehttpx==0.1.1
     # via gradio
-safetensors==0.4.5
-    # via
-    #   accelerate
-    #   transformers
-scikit-learn==1.5.2
-    # via sentence-transformers
-scipy==1.14.1
-    # via
-    #   scikit-learn
-    #   sentence-transformers
 semantic-version==2.10.0
     # via gradio
-sentence-transformers==3.3.0
-    # via -r .\requirements.in
 shellingham==1.5.4
     # via typer
 six==1.16.0
@@ -444,41 +401,24 @@ starlette==0.41.2
     #   fastapi
     #   gradio
 sympy==1.13.1
-    # via
-    #   onnxruntime
-    #   torch
+    # via onnxruntime
 tenacity==9.0.0
     # via
     #   chromadb
     #   langchain
     #   langchain-community
     #   langchain-core
-threadpoolctl==3.5.0
-    # via scikit-learn
 tiktoken==0.8.0
     # via langchain-openai
 tokenizers==0.20.3
-    # via
-    #   chromadb
-    #   transformers
+    # via chromadb
 tomlkit==0.12.0
     # via gradio
-torch==2.5.1
-    # via
-    #   accelerate
-    #   bitsandbytes
-    #   sentence-transformers
 tqdm==4.67.0
     # via
     #   chromadb
     #   huggingface-hub
     #   openai
-    #   sentence-transformers
-    #   transformers
-transformers==4.46.2
-    # via
-    #   -r .\requirements.in
-    #   sentence-transformers
 typer==0.13.0
     # via
     #   chromadb
@@ -496,7 +436,6 @@ typing-extensions==4.12.2
     #   pydantic
     #   pydantic-core
     #   sqlalchemy
-    #   torch
     #   typer
     #   typing-inspect
 typing-inspect==0.9.0
