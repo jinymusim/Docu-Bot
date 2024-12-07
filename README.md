@@ -15,7 +15,7 @@ They are available on Microsoft website [Build Tools](https://visualstudio.micro
 Following model was selected as Default models for Embedding.
 
 - Embedding Model: [all-mpnet-base-v1](https://huggingface.co/sentence-transformers/all-mpnet-base-v1)
-- [serve-model](https://github.com/jinymusim/serve-model) project is needed
+- [serve-model](https://github.com/jinymusim/serve-model) project is needed for standalone model serving.
 
 To change it, rewrite the default value in ***MODEL_TYPES.py***. For example to `embedding-3-small`
 
