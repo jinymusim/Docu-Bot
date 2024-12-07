@@ -28,6 +28,9 @@ parser.add_argument(
     "--keep-history", action="store_true", help="Keep the history of the chatbot"
 )
 parser.add_argument(
+    "--judge", action="store_true", help="Judge the quality of the answer"
+)
+parser.add_argument(
     "--port", default=7860, type=int, help="Port to run the Gradio server on"
 )
 
@@ -36,7 +39,10 @@ def main(args):
 
     retrival_class = RetrivalAugment(args=args)
     generate_answer = partial(
-        retrival_class.__call__, rerank=args.rerank, preserve_history=args.keep_history
+        retrival_class.__call__,
+        rerank=args.rerank,
+        preserve_history=args.keep_history,
+        judge_answer=args.judge,
     )
 
     demo = gr.Blocks(

@@ -520,6 +520,34 @@ class RetrivalAugment:
                 )
         return sorted(reranked_docs, key=lambda x: x[1], reverse=True)
 
+    def _construct_messages(self, copied_inputs, git_repos, shared, system_prompt):
+        """Construct messages for the OpenAI API call."""
+        messages = [{"role": "system", "content": system_prompt}]
+        for one_input in copied_inputs:
+            role = one_input["role"]
+            messages.append(
+                {
+                    "role": one_input["role"],
+                    "content": (
+                        one_input["content"]
+                        if role == "assistant"
+                        else PROMPTS.INPUT_PROMPT.format(
+                            source="\n".join(
+                                git_repos + (shared if shared != None else [])
+                            ),
+                            version_context="\n".join(
+                                [str(doc) for doc in one_input["docs"]]
+                            ),
+                            shared_context="\n".join(
+                                [str(sh) for sh in one_input["shared"]]
+                            ),
+                            question=one_input["content"],
+                        )
+                    ),
+                }
+            )
+        return messages
+
     def __call__(
         self,
         git_repos: list[str] = None,
@@ -532,6 +560,7 @@ class RetrivalAugment:
         system_prompt: str = PROMPTS.SYSTEM_PROMPT,
         rerank: bool = True,
         preserve_history: bool = True,
+        judge_answer: bool = False,
     ):
         if len(git_repos) == 0 and len(shared) == 0:
             yield "I was not given any documentation path to work from."
@@ -635,30 +664,9 @@ class RetrivalAugment:
                         copied_inputs[i]["shared"]
                     )
 
-        messages = [{"role": "system", "content": system_prompt}]
-        for one_input in copied_inputs:
-            role = one_input["role"]
-            messages.append(
-                {
-                    "role": one_input["role"],
-                    "content": (
-                        one_input["content"]
-                        if role == "assistant"
-                        else PROMPTS.INPUT_PROMPT.format(
-                            source="\n".join(
-                                git_repos + (shared if shared != None else [])
-                            ),
-                            version_context="\n".join(
-                                [str(doc) for doc in one_input["docs"]]
-                            ),
-                            shared_context="\n".join(
-                                [str(sh) for sh in one_input["shared"]]
-                            ),
-                            question=one_input["content"],
-                        )
-                    ),
-                }
-            )
+        messages = self._construct_messages(
+            copied_inputs, git_repos, shared, system_prompt
+        )
 
         completion = open_api.chat.completions.create(
             model=model,
@@ -677,4 +685,28 @@ class RetrivalAugment:
                 if chunk.choices[0].delta.content != None
                 else ""
             )
+            yield inputs
+
+        if judge_answer:
+            judgment_prompt = PROMPTS.JUDGEMENT_PROMPT.format(
+                question=copied_inputs[-1]["content"],
+                answer=inputs[-1]["content"],
+                version_context="\n".join(
+                    [str(doc) for doc in copied_inputs[-1]["docs"]]
+                ),
+                shared_context="\n".join(
+                    [str(sh) for sh in copied_inputs[-1]["shared"]]
+                ),
+            )
+
+            judgment_response = open_api.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": judgment_prompt}],
+                max_tokens=10,
+                temperature=0.1,
+            )
+            print(judgment_response)
+            inputs[-1][
+                "content"
+            ] += f"\n\nJudgment: {judgment_response.choices[0].message.content}"
             yield inputs
