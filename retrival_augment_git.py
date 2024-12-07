@@ -378,7 +378,6 @@ class RetrivalAugment:
             os.remove(file_info)
             return
         # Process the file
-        # Process the file
         else:
             # Move file to cache directory
             shutil.move(file_info, os.path.join(self.cache_dir, filename))
@@ -672,7 +671,6 @@ class RetrivalAugment:
         completion = open_api.chat.completions.create(
             model=model,
             messages=messages,
-            max_tokens=2048,
             max_tokens=2048,
             stream=True,
             temperature=(
