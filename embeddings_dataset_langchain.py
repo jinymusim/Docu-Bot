@@ -91,7 +91,7 @@ class EmbeddingsDataset(Dataset):
                     "*.py",
                     {
                         "language": Language.PYTHON,
-                        "chunk_size": 256,
+                        "chunk_size": 512,
                         "chunk_overlap": 0,
                         "length_function": len,
                     },
