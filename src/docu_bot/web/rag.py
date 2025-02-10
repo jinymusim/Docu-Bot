@@ -192,6 +192,8 @@ def main(args):
             retrieved_documents=current_documents,
             model_type=model,
             api_key=api_key,
+            prompt=prompt,
+            temperature=temperature,
         ):
             yield out
 

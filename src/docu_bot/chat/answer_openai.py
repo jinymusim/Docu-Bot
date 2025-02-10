@@ -15,15 +15,15 @@ from docu_bot.retrievals.rerank_document_retrieval import RerankDocumentRetrieva
 from docu_bot.retrievals.query_alteration_document_retrieval import (
     QueryAlterationDocumentRetrieval,
 )
-
-from docu_bot.chat.utils import create_chatopenai_model
+from docu_bot.utils import create_chatopenai_model
 
 
 def answer_question(
     messages: List[Dict[str, str]],
     documents: List[Document],
     model: ChatOpenAI,
-    prompt: str = PROMPTS.INPUT_PROMPT,
+    prompt: str = PROMPTS.SYSTEM_PROMPT,
+    temperature: float = 0.7,
     stream: bool = False,
 ) -> Iterator[BaseMessageChunk] | BaseMessage:
     """
@@ -31,9 +31,10 @@ def answer_question(
     """
     # Get the best answer from the model
     prompt_template = ChatPromptTemplate.from_messages(
-        [("system", PROMPTS.SYSTEM_PROMPT), ("user", prompt)]
+        [("system", prompt), ("user", PROMPTS.INPUT_PROMPT)]
         + [(message["role"], message["content"]) for message in messages]
     )
+    model = model.bind(temperature=temperature)
     if stream:
         return model.stream(
             prompt_template.invoke(
@@ -120,7 +121,8 @@ def rag(
     retrieved_documents: List[Document],
     model_type: str,
     api_key: str,
-    prompt: str = PROMPTS.INPUT_PROMPT,
+    temperature: float = 0.7,
+    prompt: str = PROMPTS.SYSTEM_PROMPT,
 ) -> List[Dict[str, str]]:
 
     llm = create_chatopenai_model(
@@ -133,6 +135,7 @@ def rag(
         documents=retrieved_documents,
         model=llm,
         prompt=prompt,
+        temperature=temperature,
         stream=False,
     )
     output = deepcopy(messages)
@@ -145,7 +148,8 @@ def stream_rag(
     retrieved_documents: List[Document],
     model_type: str,
     api_key: str,
-    prompt: str = PROMPTS.INPUT_PROMPT,
+    temperature: float = 0.7,
+    prompt: str = PROMPTS.SYSTEM_PROMPT,
 ) -> Generator[List[Dict[str, str]], None, None]:
 
     llm = create_chatopenai_model(
@@ -158,6 +162,7 @@ def stream_rag(
         documents=retrieved_documents,
         model=llm,
         prompt=prompt,
+        temperature=temperature,
         stream=True,
     )
 
