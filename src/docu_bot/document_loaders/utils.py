@@ -4,11 +4,11 @@ import git
 import logging
 
 PERMITED_FILE_EXTENSIONS = [
-    ".txt",
+    # ".txt",
     ".pdf",
     ".md",
     ".rst",
-    ".py",
+    # ".py",
 ]
 
 

@@ -84,6 +84,7 @@ class DocumentRetrieval(MultiVectorRetriever):
                         self.docstore.mset(
                             key_value_pairs=full_docs[i : i + chunk_size],
                         )
+        self.docstore.save()
 
     def _get_relevant_documents(self, query, *, run_manager):
         min_score = self.search_kwargs.get("min_score", 0.5)

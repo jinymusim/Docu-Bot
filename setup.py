@@ -27,6 +27,7 @@ setup(
         "pypdf==5.1.0",
         "wheel==0.45.0",
         "ragas==0.2.13",
+        "rapidfuzz==3.12.1",
     ],
     scripts=[
         "scripts/web_rag.py",
