@@ -2,6 +2,12 @@
 
 Changelog for `Docu-Bot` project, documenting all released changes made to the project.
 
+## [2.2.0] - 2025-02-16
+### Changed
+- Separated components for better maintainability
+- Added support for more models
+- Added notebooks for testing and evaluation
+
 ## [2.1.0] - 2024-12-07
 ### Added
 - Chat interface for better interaction with the bot
