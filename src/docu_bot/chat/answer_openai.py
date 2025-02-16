@@ -11,11 +11,11 @@ from docu_bot.stores.docstore import DocumentStore
 from docu_bot.stores.utils import LoadedVectorStores
 from docu_bot.stores.vectorstore import MultiVectorStore
 from docu_bot.retrievals.document_retrival import DocumentRetrieval
-from docu_bot.retrievals.rerank_document_retrieval import RerankDocumentRetrieval
-from docu_bot.retrievals.query_alteration_document_retrieval import (
+from docu_bot.retrievals.rerank_retrieval import RerankDocumentRetrieval
+from docu_bot.retrievals.query_alteration_retrieval import (
     QueryAlterationDocumentRetrieval,
 )
-from docu_bot.utils import create_chatopenai_model
+from docu_bot.utils import create_chatopenai_model, format_docs
 
 
 def answer_question(
@@ -31,7 +31,7 @@ def answer_question(
     """
     # Get the best answer from the model
     prompt_template = ChatPromptTemplate.from_messages(
-        [("system", prompt), ("user", PROMPTS.INPUT_PROMPT)]
+        [("user", prompt + PROMPTS.INPUT_PROMPT)]
         + [(message["role"], message["content"]) for message in messages]
     )
     model = model.bind(temperature=temperature)
@@ -39,12 +39,7 @@ def answer_question(
         return model.stream(
             prompt_template.invoke(
                 {
-                    "context": "\n\n".join(
-                        [
-                            f"{i + 1}. {doc.page_content}"
-                            for i, doc in enumerate(documents)
-                        ]
-                    ),
+                    "context": format_docs(documents),
                     "query": messages[0]["content"],
                 }
             )
@@ -53,12 +48,7 @@ def answer_question(
         return model.invoke(
             prompt_template.invoke(
                 {
-                    "context": "\n\n".join(
-                        [
-                            f"{i + 1}. {doc.page_content}"
-                            for i, doc in enumerate(documents)
-                        ]
-                    ),
+                    "context": format_docs(documents),
                     "query": messages[0]["content"],
                 }
             )

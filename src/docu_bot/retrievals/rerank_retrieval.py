@@ -1,10 +1,12 @@
 from math import exp
 from collections import defaultdict
 
+from typing import List
 from docu_bot.retrievals.document_retrival import DocumentRetrieval
 from docu_bot.constants import PROMPTS
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
+from langchain_core.documents import Document
 
 
 class RerankDocumentRetrieval(DocumentRetrieval):
@@ -12,11 +14,11 @@ class RerankDocumentRetrieval(DocumentRetrieval):
     llm: ChatOpenAI
     rerank_prompt: str = PROMPTS.RERANK_PROMPT
 
-    def _get_relevant_documents(self, query, *, run_manager):
+    def _get_relevant_documents(self, query, *, run_manager) -> List[Document]:
 
         template = ChatPromptTemplate(
             [
-                ("system", self.rerank_prompt),
+                ("user", self.rerank_prompt),
             ]
         )
 
@@ -31,7 +33,7 @@ class RerankDocumentRetrieval(DocumentRetrieval):
         for doc in results:
             doc_id = doc.metadata.get(self.id_key)
 
-            prompt = template.invoke({"query": query, "document": doc.page_content})
+            prompt = template.invoke({"query": query, "context": doc.page_content})
             msg = llm.invoke(prompt)
             score = 0
             if msg.response_metadata["logprobs"].get("Yes", None):

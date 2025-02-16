@@ -1,37 +1,42 @@
 from collections import defaultdict
 
-from docu_bot.retrievals.document_retrival import DocumentRetrieval
+from typing import List
+from docu_bot.retrievals.query_alteration_retrieval import (
+    QueryAlterationDocumentRetrieval,
+)
 from docu_bot.constants import PROMPTS
-from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
+from langchain_core.documents import Document
 
 
-class QueryAlterationDocumentRetrieval(DocumentRetrieval):
+class ContextQueryAlterationDocumentRetrieval(QueryAlterationDocumentRetrieval):
 
-    llm: ChatOpenAI
-    query_prompt: str = PROMPTS.QUERY_PROMPT
+    query_prompt: str = PROMPTS.CONTEXT_QUERY_PROMPT
 
-    def _get_relevant_documents(self, query, *, run_manager):
+    def _get_relevant_documents(self, query, *, run_manager) -> List[Document]:
 
-        template = ChatPromptTemplate(
+        template = ChatPromptTemplate.from_messages(
             [
-                ("system", self.query_prompt),
+                ("user", self.query_prompt),
             ]
         )
-        num_custom_queires = self.search_kwargs.get("num_custom_queires", 5)
-        min_score = self.search_kwargs.get("min_score", 0.5)
 
-        queries = [query]
-        for _ in range(num_custom_queires):
-            prompt = template.invoke({"query": query})
+        min_score = self.search_kwargs.get("min_score", 0.5)
+        results = self.vectorstore.similarity_search(
+            query, k=self.search_kwargs.get("k", 5)
+        )
+
+        queries = []
+        for context in results:
+            prompt = template.invoke({"query": query, "context": context.page_content})
             msg = self.llm.invoke(prompt)
             queries.append(msg.content)
 
         ids_doc = defaultdict(list)
         ids_score = defaultdict(list)
-        for query in queries:
+        for sythetic_query in queries:
             results = self.vectorstore.similarity_search_with_score(
-                query, k=self.search_kwargs.get("k", 5)
+                sythetic_query, k=self.search_kwargs.get("k", 5)
             )
             for doc, score in results:
                 doc_id = doc.metadata.get(self.id_key)

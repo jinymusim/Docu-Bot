@@ -1,3 +1,5 @@
+from typing import List
+from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from docu_bot.constants import MODEL_TYPES
 
@@ -31,3 +33,7 @@ def create_openai_embeddings(
             else None
         ),
     )
+
+
+def format_docs(docs: List[Document]) -> str:
+    return "\n\n".join([f"{i+1}. " + d.page_content for i, d in enumerate(docs)])

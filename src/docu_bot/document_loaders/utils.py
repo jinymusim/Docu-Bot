@@ -74,9 +74,6 @@ class LoadedRepositoriesAndFiles:
 def get_file_link(repo_path_or_key, file_path, save_path):
     if repo_path_or_key.endswith(".git"):
         branch = "master"
-    # ZipFiles and PDF files are not in a git repository
-    elif "." in os.path.basename(repo_path_or_key):
-        return None
     else:
         branch = os.path.basename(repo_path_or_key)
         repo_path_or_key = os.path.dirname(repo_path_or_key)

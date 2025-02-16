@@ -18,6 +18,7 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_core.runnables.passthrough import RunnablePassthrough
 from langchain_core.output_parsers.string import StrOutputParser
 from ragas.evaluation import evaluate
+from docu_bot.utils import format_docs
 
 
 class Evaluator:
@@ -51,11 +52,14 @@ class Evaluator:
         prompt=PROMPTS.SYSTEM_PROMPT,
     ):
         chat_prompt = ChatPromptTemplate.from_messages(
-            [("system", prompt), ("user", PROMPTS.INPUT_PROMPT)]
+            [("user", prompt + PROMPTS.INPUT_PROMPT)]
         )
 
         rag_chain = (
-            {"context": document_retriever, "query": RunnablePassthrough()}
+            {
+                "context": document_retriever | format_docs,
+                "query": RunnablePassthrough(),
+            }
             | chat_prompt
             | rag_llm
             | StrOutputParser()
