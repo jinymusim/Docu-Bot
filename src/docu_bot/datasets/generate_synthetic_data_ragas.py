@@ -11,20 +11,12 @@ from ragas.testset.transforms.extractors.llm_based import NERExtractor
 def _get_personas() -> list[Persona]:
     return [
         Persona(
-            name="Curious Developer",
-            role_description="A developer who is curious about the codebase and wants to understand the codebase structure.",
-        ),
-        Persona(
-            name="Code Reviewer",
-            role_description="A developer who is reviewing the codebase for quality assurance.",
-        ),
-        Persona(
             name="New Developer",
             role_description="A developer who is new to the codebase and wants to understand the codebase structure.",
         ),
         Persona(
-            name="Package Maintainer",
-            role_description="A developer who is maintaining the codebase.",
+            name="Product user",
+            role_description="A user who wants to understand the product's features.",
         ),
     ]
 

@@ -10,12 +10,28 @@ from docu_bot.constants import PROMPTS
 from docu_bot.stores.docstore import DocumentStore
 from docu_bot.stores.utils import LoadedVectorStores
 from docu_bot.stores.vectorstore import MultiVectorStore
+
+from docu_bot.retrievals.empty_retrieval import EmptyRetrieval
 from docu_bot.retrievals.document_retrival import DocumentRetrieval
+from docu_bot.retrievals.generative_retrieval import GenerativeDocumentRetrieval
 from docu_bot.retrievals.rerank_retrieval import RerankDocumentRetrieval
 from docu_bot.retrievals.query_alteration_retrieval import (
     QueryAlterationDocumentRetrieval,
 )
+from docu_bot.retrievals.context_query_alteration_retrieval import (
+    ContextQueryAlterationDocumentRetrieval,
+)
+
 from docu_bot.utils import create_chatopenai_model, format_docs
+
+
+class RETRIEVAL_TYPES:
+    EMPTY = "empty"
+    DEFAULT = "default"
+    GENERATIVE = "generative"
+    RERANK = "rerank"
+    QUERY_ALTERATION = "query_alteration"
+    CONTEXT_QUERY_ALTERATION = "context_query_alteration"
 
 
 def answer_question(
@@ -72,8 +88,7 @@ def prepare_retriever(
     loaded_vectorstores: LoadedVectorStores,
     model_type: str,
     api_key: str,
-    rerank: bool = False,
-    query_alteration: bool = False,
+    retrieval_type: RETRIEVAL_TYPES = RETRIEVAL_TYPES.DEFAULT,
     search_kwargs: Dict[str, str] = {},
 ) -> BaseRetriever:
     vectorstore_to_use = []
@@ -86,15 +101,35 @@ def prepare_retriever(
         api_key=api_key,
     )
 
-    if rerank:
-        return RerankDocumentRetrieval(
+    if retrieval_type == RETRIEVAL_TYPES.EMPTY:
+        return EmptyRetrieval(
+            vectorstore=vectorstore,
+            docstore=docstore,
+            search_kwargs=search_kwargs,
+        )
+    elif retrieval_type == RETRIEVAL_TYPES.GENERATIVE:
+        return GenerativeDocumentRetrieval(
             vectorstore=vectorstore,
             docstore=docstore,
             llm=llm,
             search_kwargs=search_kwargs,
         )
-    elif query_alteration:
+    elif retrieval_type == RETRIEVAL_TYPES.CONTEXT_QUERY_ALTERATION:
+        return ContextQueryAlterationDocumentRetrieval(
+            vectorstore=vectorstore,
+            docstore=docstore,
+            llm=llm,
+            search_kwargs=search_kwargs,
+        )
+    elif retrieval_type == RETRIEVAL_TYPES.QUERY_ALTERATION:
         return QueryAlterationDocumentRetrieval(
+            vectorstore=vectorstore,
+            docstore=docstore,
+            llm=llm,
+            search_kwargs=search_kwargs,
+        )
+    elif retrieval_type == RETRIEVAL_TYPES.RERANK:
+        return RerankDocumentRetrieval(
             vectorstore=vectorstore,
             docstore=docstore,
             llm=llm,
@@ -102,7 +137,9 @@ def prepare_retriever(
         )
     else:
         return DocumentRetrieval(
-            vectorstore=vectorstore, docstore=docstore, search_kwargs=search_kwargs
+            vectorstore=vectorstore,
+            docstore=docstore,
+            search_kwargs=search_kwargs,
         )
 
 

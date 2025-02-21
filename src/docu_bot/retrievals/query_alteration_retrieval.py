@@ -15,6 +15,8 @@ class QueryAlterationDocumentRetrieval(DocumentRetrieval):
 
     def _get_relevant_documents(self, query, *, run_manager) -> List[Document]:
 
+        llm = self.llm.bind(stop=["query"])
+
         template = ChatPromptTemplate.from_messages(
             [
                 ("user", self.query_prompt),
@@ -26,7 +28,7 @@ class QueryAlterationDocumentRetrieval(DocumentRetrieval):
         queries = []
         for _ in range(num_custom_queires):
             prompt = template.invoke({"query": query})
-            msg = self.llm.invoke(prompt)
+            msg = llm.invoke(prompt)
             queries.append(msg.content)
 
         ids_doc = defaultdict(list)

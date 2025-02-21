@@ -20,6 +20,8 @@ class GenerativeDocumentRetrieval(DocumentRetrieval):
 
     def _get_relevant_documents(self, query, *, run_manager) -> List[Document]:
 
+        llm = self.llm.bind(stop=["context"])
+
         template = ChatPromptTemplate.from_messages(
             [
                 ("user", self.generate_prompt),
@@ -30,7 +32,7 @@ class GenerativeDocumentRetrieval(DocumentRetrieval):
         documents = []
         for _ in range(k):
             prompt = template.invoke({"query": query})
-            msg = self.llm.invoke(prompt)
+            msg = llm.invoke(prompt)
             documents.append(
                 Document(
                     page_content=msg.content,

@@ -1,6 +1,5 @@
 # Description: Contains the prompt strings for the OpenAI API calls.
-SYSTEM_PROMPT = """You are a helpful AI assistant that specilizes in answering questions based on the provided documents.
-While answering, remember to provide the source of the information. If no source is available, please mention that the information is based on your knowledge.
+SYSTEM_PROMPT = """You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know.
 
 """
 
@@ -11,29 +10,39 @@ question: {query}
 
 answer:"""
 
-RERANK_PROMPT = '''You are an Assistant responsible for helping detect whether the retrieved document is relevant to the query.
-For a given input, you need to output a single token: "Yes" or "No" indicating the retrieved document is relevant to the query.
+RERANK_PROMPT = '''You are an assistant responsible for helping detect whether the retrieved document is relevant to the query.
+For a given input, you need to output a single token: "Yes" or "No" indicating the relevance of the document to the query.
 
-query: Has the coronavirus vaccine been approved?
-document: """The Pfizer-BioNTech COVID-19 vaccine was approved for emergency use in the United States on December 11, 2020."""
+query: Does the application support file transfer protocols?
+document: """dCache provides a GSI-FTP door, which is in effect a GSI authenticated FTP access point to dCache
+listing a directory
+To list the content of a dCache directory, the GSI-FTP protocol can be used;
+
+[user] $ edg-gridftp-ls gsiftp://gridftp-door.example.org/pnfs/example.org/data/dteam/
+"""
 relevant: Yes
 
 query: {query}
 document: """{context}"""
 relevant:'''
 
-QUERY_PROMPT = """You are an Assistant responsible for transforming the query to improve the search results. 
-For given query, you need to output a new query that will improve the search results.
+QUERY_PROMPT = """You are an assistant responsible for rewriting the query to improve the search results. 
+For given query, you need to alter the query to improve the search results. In general the query should be more specific or more general.
+The altered query should be of similar length to the original query.
+
+query: What protocols are supported?
+altered query: What are the file protocols supported by the application?
 
 query: {query}
-new query: """
+altered query: """
 
-CONTEXT_QUERY_PROMPT = """You are an Assistant responsible for transforming the query to improve the search results.
-You are given a context to the original query and you need to output a new query that will improve the search results.
+CONTEXT_QUERY_PROMPT = """You are an assistant responsible for rewriting the query to improve the search results.
+You are given a context to the original query and you need to output am altered query that will improve the search results.
+In general the query should be more specific or more general. The altered query should be of similar length to the original query.
 
 query: {query}
 context: {context}
-new query: """
+altered query: """
 
 GENERATE_DOCUMENT_PROMPT = """You are an Assistant responsible for generating a document based on the provided context.
 For a given input, you need to output a document that is relevant to the context.

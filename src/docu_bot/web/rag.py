@@ -18,6 +18,7 @@ from docu_bot.stores.utils import (
 from docu_bot.stores.docstore import DocumentStore
 from docu_bot.constants import PROMPTS, MODEL_TYPES
 from docu_bot.chat.answer_openai import (
+    RETRIEVAL_TYPES,
     prepare_retriever,
     get_documents,
     stream_rag,
@@ -178,8 +179,7 @@ def main(args):
             loaded_vectorstores=vectorstores_cache,
             model_type=model,
             api_key=api_key,
-            rerank=args.rerank,
-            query_alteration=args.query_alteration,
+            retrieval_type=args.retrival_type,
         )
         documents = get_documents(chatbot_box[-1]["content"], retrieval)
         return documents
@@ -696,13 +696,21 @@ def run():
         help="Maximal number of branches to cache at once",
     )
     parser.add_argument(
-        "--rerank", action="store_true", help="Rerank the documents based on the query"
+        "--retrival_type",
+        default=RETRIEVAL_TYPES.DEFAULT,
+        type=str,
+        help="Retrieval type",
+        choices={
+            RETRIEVAL_TYPES.DEFAULT,
+            RETRIEVAL_TYPES.EMPTY,
+            RETRIEVAL_TYPES.GENERATIVE,
+            RETRIEVAL_TYPES.CONTEXT_QUERY_ALTERATION,
+            RETRIEVAL_TYPES.QUERY_ALTERATION,
+            RETRIEVAL_TYPES.RERANK,
+        },
     )
     parser.add_argument(
         "--keep-history", action="store_true", help="Keep the history of the chatbot"
-    )
-    parser.add_argument(
-        "--query-alteration", action="store_true", help="Alter query for better results"
     )
     parser.add_argument(
         "--port", default=7860, type=int, help="Port to run the Gradio server on"

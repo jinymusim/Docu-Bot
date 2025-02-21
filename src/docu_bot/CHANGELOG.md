@@ -2,6 +2,13 @@
 
 Changelog for `Docu-Bot` project, documenting all released changes made to the project.
 
+## [2.2.1] - 2025-02-21
+### Changed
+- Some optimization of prompts
+- Added support for more embeddings
+### Fixed
+- Fixed paths for git repositories with dots in the name
+
 ## [2.2.0] - 2025-02-16
 ### Changed
 - Separated components for better maintainability

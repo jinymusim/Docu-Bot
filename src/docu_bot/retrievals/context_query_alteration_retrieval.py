@@ -15,6 +15,8 @@ class ContextQueryAlterationDocumentRetrieval(QueryAlterationDocumentRetrieval):
 
     def _get_relevant_documents(self, query, *, run_manager) -> List[Document]:
 
+        llm = self.llm.bind(stop=["query"])
+
         template = ChatPromptTemplate.from_messages(
             [
                 ("user", self.query_prompt),
@@ -29,7 +31,7 @@ class ContextQueryAlterationDocumentRetrieval(QueryAlterationDocumentRetrieval):
         queries = []
         for context in results:
             prompt = template.invoke({"query": query, "context": context.page_content})
-            msg = self.llm.invoke(prompt)
+            msg = llm.invoke(prompt)
             queries.append(msg.content)
 
         ids_doc = defaultdict(list)

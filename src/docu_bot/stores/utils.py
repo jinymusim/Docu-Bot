@@ -21,6 +21,8 @@ class LoadedVectorStores:
             "data",
             "vector_stores.json",
         ),
+        embedding_model=MODEL_TYPES.DEFAULT_EMBED_MODEL,
+        api_key="None",
     ):
 
         self._json_file = json_file
@@ -38,17 +40,21 @@ class LoadedVectorStores:
                 self._json_data.pop(repo_or_files)
             else:
                 if ".git" in repo_or_files:
-                    collection_name = f"{os.path.basename(os.path.dirname(repo_or_files)).split('.')[0]}-{os.path.basename(repo_or_files)}"
+                    collection_name = f"{os.path.basename(os.path.dirname(repo_or_files)).split('.git')[0]}-{os.path.basename(repo_or_files)}"
                 else:
-                    collection_name = os.path.basename(repo_or_files).split(".")[0]
+                    collection_name = os.path.basename(repo_or_files).split(".git")[0]
 
                 self._vectorstores[repo_or_files] = Chroma(
                     collection_name=collection_name,
                     persist_directory=data_path,
                     embedding_function=OpenAIEmbeddings(
-                        model=MODEL_TYPES.DEFAULT_EMBED_MODEL,
-                        api_key="None",
-                        base_url=MODEL_TYPES.DEFAULT_EMBED_LOC,
+                        model=embedding_model,
+                        api_key=api_key,
+                        base_url=(
+                            MODEL_TYPES.DEFAULT_EMBED_LOC
+                            if embedding_model == MODEL_TYPES.DEFAULT_EMBED_MODEL
+                            else None
+                        ),
                     ),
                 )
 
@@ -73,15 +79,17 @@ def create_vector_store_from_document_loader(
     document_loader: BaseLoader,
     docstore: DocumentStore,
     vectorstores: LoadedVectorStores,
+    embedding_model=MODEL_TYPES.DEFAULT_EMBED_MODEL,
+    api_key="None",
 ) -> Chroma:
     if hasattr(document_loader, "filename"):
         collection_name = document_loader.filename
-        collection_nameshort = document_loader.filename.split(".")[0]
+        collection_nameshort = document_loader.filename.split(".git")[0]
     else:
         collection_name = os.path.join(
             document_loader.repo_path, document_loader.branch
         )
-        collection_nameshort = f'{os.path.basename(document_loader.repo_path).split(".")[0]}-{document_loader.branch}'
+        collection_nameshort = f'{os.path.basename(document_loader.repo_path).split(".git")[0]}-{document_loader.branch}'
     if collection_name in vectorstores._json_data:
         return vectorstores._vectorstores[collection_name]
 
@@ -90,9 +98,13 @@ def create_vector_store_from_document_loader(
             collection_name=collection_nameshort,
             persist_directory=f"{document_loader.save_path}-vectorstore",
             embedding_function=OpenAIEmbeddings(
-                model=MODEL_TYPES.DEFAULT_EMBED_MODEL,
-                api_key="None",
-                base_url=MODEL_TYPES.DEFAULT_EMBED_LOC,
+                model=embedding_model,
+                api_key=api_key,
+                base_url=(
+                    MODEL_TYPES.DEFAULT_EMBED_LOC
+                    if embedding_model == MODEL_TYPES.DEFAULT_EMBED_MODEL
+                    else None
+                ),
             ),
         ),
         docstore=docstore,

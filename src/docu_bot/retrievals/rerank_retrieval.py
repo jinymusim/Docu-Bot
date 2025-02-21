@@ -22,7 +22,7 @@ class RerankDocumentRetrieval(DocumentRetrieval):
             ]
         )
 
-        llm = self.llm.bind(logprobs=True, max_tokens=2)
+        llm = self.llm.bind(logprobs=True)
 
         min_score = self.search_kwargs.get("min_score", 0.1)
         results = self.vectorstore.similarity_search(
@@ -36,8 +36,11 @@ class RerankDocumentRetrieval(DocumentRetrieval):
             prompt = template.invoke({"query": query, "context": doc.page_content})
             msg = llm.invoke(prompt)
             score = 0
-            if msg.response_metadata["logprobs"].get("Yes", None):
-                score = exp(msg.response_metadata["logprobs"]["Yes"])
+            log_probs = msg.response_metadata.get("logprobs", {})
+            if "Yes" in log_probs.keys():
+                score = exp(log_probs["Yes"])
+            elif "Yes" in msg.content:
+                score = 1.0
 
             if score > min_score:
                 doc.metadata["score"] = score

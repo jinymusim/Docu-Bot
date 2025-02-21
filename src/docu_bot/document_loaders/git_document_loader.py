@@ -71,7 +71,9 @@ class GitDocumentLoader(BaseLoader):
         if save_path:
             return save_path
         return os.path.abspath(
-            os.path.join(cache_dir, os.path.basename(repo_path).split(".")[0], branch)
+            os.path.join(
+                cache_dir, os.path.basename(repo_path).split(".git")[0], branch
+            )
         )
 
     def lazy_load(self) -> Iterator[Document]:
