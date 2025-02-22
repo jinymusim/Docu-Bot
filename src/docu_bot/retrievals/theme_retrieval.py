@@ -1,48 +1,42 @@
-from math import exp
+import asyncio
 from collections import defaultdict
-
 from typing import List
 from docu_bot.retrievals.document_retrival import DocumentRetrieval
 from docu_bot.constants import PROMPTS
 from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
+from ragas.llms import LangchainLLMWrapper
+
+from ragas.testset.transforms.extractors.llm_based import ThemesExtractor
 
 
-class RerankDocumentRetrieval(DocumentRetrieval):
+class ThemeRetrieval(DocumentRetrieval):
 
     llm: ChatOpenAI
-    rerank_prompt: str = PROMPTS.RERANK_PROMPT
+    query_prompt: str = PROMPTS.QUERY_PROMPT
 
     def _get_relevant_documents(self, query, *, run_manager) -> List[Document]:
 
-        template = ChatPromptTemplate(
-            [
-                ("user", self.rerank_prompt),
-            ]
-        )
-
-        llm = self.llm.bind(logprobs=True, max_tokens=3)
+        from ragas.testset.graph import Node
 
         min_score = self.search_kwargs.get("min_score", 0.0)
+
+        extractor = ThemesExtractor(llm=LangchainLLMWrapper(self.llm))
+        _, entities = asyncio.get_event_loop().run_until_complete(
+            extractor.extract(Node(properties={"page_content": query}))
+        )
+        new_query = " ".join(entities) if entities else query
+
         results = self.vectorstore.similarity_search_with_score(
-            query, k=self.search_kwargs.get("ask", 10)
+            new_query,
+            k=self.search_kwargs.get("k", 5),
         )
 
         ids_doc = defaultdict(list)
         ids_score = defaultdict(list)
-        for doc, sim_score in results:
+        for doc, score in results:
             doc_id = doc.metadata.get(self.id_key)
-
-            prompt = template.invoke({"query": query, "context": doc.page_content})
-            msg = llm.invoke(prompt)
-            score = -1.0
-            log_probs = msg.response_metadata.get("logprobs", {})
-            if log_probs and "Yes" in log_probs.keys():
-                score = exp(log_probs["Yes"])
-            elif "Yes" in msg.content:
-                score = 1.0 - sim_score
-
+            score = 1.0 - score
             if score > min_score:
                 doc.metadata["score"] = score
                 ids_doc[doc_id].append(doc)

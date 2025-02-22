@@ -1,3 +1,4 @@
+from typing import List
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.llms import LangchainLLMWrapper
 from ragas.testset import TestsetGenerator
@@ -5,10 +6,12 @@ from ragas.testset.persona import Persona
 from ragas.testset.synthesizers.single_hop.specific import (
     SingleHopSpecificQuerySynthesizer,
 )
+from ragas.testset.synthesizers.testset_schema import Testset
+from ragas.testset.transforms.base import Extractor
 from ragas.testset.transforms.extractors.llm_based import NERExtractor
 
 
-def _get_personas() -> list[Persona]:
+def _get_personas() -> List[Persona]:
     return [
         Persona(
             name="New Developer",
@@ -21,13 +24,13 @@ def _get_personas() -> list[Persona]:
     ]
 
 
-def _get_transforms(llm: LangchainLLMWrapper) -> list:
+def _get_transforms(llm: LangchainLLMWrapper) -> List[Extractor]:
     ner = NERExtractor(llm=llm)
 
     return [ner]
 
 
-def _get_qurery_distribution(llm: LangchainLLMWrapper) -> list:
+def _get_qurery_distribution(llm: LangchainLLMWrapper) -> List[tuple]:
     distribution = [
         (SingleHopSpecificQuerySynthesizer(llm=llm), 1.0),
     ]
@@ -54,7 +57,7 @@ def generate_dataset(
     dataset_size,
     transforms=None,
     query_distribution=None,
-):
+) -> Testset:
     if transforms is None:
         transforms = _get_transforms(generator.llm)
 

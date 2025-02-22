@@ -9,16 +9,23 @@ class MultiVectorStore(VectorStore):
     def __init__(self, chroma_vectors: List[Chroma]):
         self.chroma_vectors = chroma_vectors
 
-    def similarity_search_with_score(self, query, k):
+    def similarity_search_with_score(
+        self, query, k, filter: dict | None = None, **kwargs
+    ):
         results = []
         for chroma in self.chroma_vectors:
-            results.extend(chroma.similarity_search_with_score(query, k))
+            results.extend(
+                chroma.similarity_search_with_score(query, k, filter, **kwargs)
+            )
 
         results = sorted(results, key=lambda x: x[1], reverse=True)
         return results[:k]
 
-    def similarity_search(self, query, k=4, **kwargs):
-        return [doc for doc, _ in self.similarity_search_with_score(query, k)]
+    def similarity_search(self, query, k=4, filter: dict | None = None, **kwargs):
+        return [
+            doc
+            for doc, _ in self.similarity_search_with_score(query, k, filter, kwargs)
+        ]
 
     ## The following methods are not implemented and are here so the class is not abstract
 

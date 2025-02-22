@@ -14,7 +14,7 @@ def create_chatopenai_model(
     return ChatOpenAI(
         model=model_type,
         api_key=api_key,
-        base_url=MODEL_TYPES.LLM_MODELS.get(model_type),
+        base_url=MODEL_TYPES.LLM_MODELS[model_type],
     )
 
 
@@ -36,4 +36,6 @@ def create_openai_embeddings(
 
 
 def format_docs(docs: List[Document]) -> str:
-    return "\n\n".join([f"{i+1}. " + d.page_content for i, d in enumerate(docs)])
+    return "\n\n".join(
+        [f"{i+1}. Document: \n" + d.page_content for i, d in enumerate(docs)]
+    )

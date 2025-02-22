@@ -28,6 +28,8 @@ setup(
         "wheel==0.45.0",
         "ragas==0.2.13",
         "rapidfuzz==3.12.1",
+        "plotly==6.0.0",
+        "nbformat==5.10.4",
     ],
     scripts=[
         "scripts/web_rag.py",

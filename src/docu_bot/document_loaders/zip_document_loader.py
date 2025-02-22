@@ -33,12 +33,12 @@ class ZipDocumentLoader(BaseLoader):
         self.save_path = self._create_save_path(save_path, cache_dir, self.filename)
         self._extract_zip()
 
-    def _get_save_path_if_cached(self):
+    def _get_save_path_if_cached(self) -> Optional[str]:
         if self.filename in self.loaded_repositories_and_files._json_data:
             return self.loaded_repositories_and_files._json_data[self.filename]
         return None
 
-    def _create_save_path(self, save_path, cache_dir, filename):
+    def _create_save_path(self, save_path, cache_dir, filename) -> str:
         if save_path:
             return save_path
         return os.path.abspath(os.path.join(cache_dir, filename.split(".")[0]))

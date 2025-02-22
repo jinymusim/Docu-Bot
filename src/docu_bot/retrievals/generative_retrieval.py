@@ -20,7 +20,7 @@ class GenerativeDocumentRetrieval(DocumentRetrieval):
 
     def _get_relevant_documents(self, query, *, run_manager) -> List[Document]:
 
-        llm = self.llm.bind(stop=["context"])
+        llm = self.llm.bind(stop=["context"], max_tokens=300)
 
         template = ChatPromptTemplate.from_messages(
             [

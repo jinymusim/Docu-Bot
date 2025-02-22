@@ -1,13 +1,14 @@
 import os
 import json
 import logging
-from typing import List
-from langchain_openai import OpenAIEmbeddings
+from typing import List, Optional
 from langchain_chroma import Chroma
 from langchain_core.document_loaders import BaseLoader
 from docu_bot.constants import MODEL_TYPES
 from docu_bot.stores.docstore import DocumentStore
 from docu_bot.retrievals.document_retrival import DocumentRetrieval
+
+from docu_bot.utils import create_chatopenai_model, create_openai_embeddings
 
 
 class LoadedVectorStores:
@@ -47,14 +48,8 @@ class LoadedVectorStores:
                 self._vectorstores[repo_or_files] = Chroma(
                     collection_name=collection_name,
                     persist_directory=data_path,
-                    embedding_function=OpenAIEmbeddings(
-                        model=embedding_model,
-                        api_key=api_key,
-                        base_url=(
-                            MODEL_TYPES.DEFAULT_EMBED_LOC
-                            if embedding_model == MODEL_TYPES.DEFAULT_EMBED_MODEL
-                            else None
-                        ),
+                    embedding_function=create_openai_embeddings(
+                        embedding_model, api_key
                     ),
                 )
 
@@ -79,8 +74,10 @@ def create_vector_store_from_document_loader(
     document_loader: BaseLoader,
     docstore: DocumentStore,
     vectorstores: LoadedVectorStores,
-    embedding_model=MODEL_TYPES.DEFAULT_EMBED_MODEL,
-    api_key="None",
+    embedding_model: str = MODEL_TYPES.DEFAULT_EMBED_MODEL,
+    embedding_api_key: str = "None",
+    llm: Optional[str] = None,
+    llm_api_key: str = "None",
 ) -> Chroma:
     if hasattr(document_loader, "filename"):
         collection_name = document_loader.filename
@@ -97,17 +94,16 @@ def create_vector_store_from_document_loader(
         vectorstore=Chroma(
             collection_name=collection_nameshort,
             persist_directory=f"{document_loader.save_path}-vectorstore",
-            embedding_function=OpenAIEmbeddings(
-                model=embedding_model,
-                api_key=api_key,
-                base_url=(
-                    MODEL_TYPES.DEFAULT_EMBED_LOC
-                    if embedding_model == MODEL_TYPES.DEFAULT_EMBED_MODEL
-                    else None
-                ),
+            embedding_function=create_openai_embeddings(
+                embedding_model, embedding_api_key
             ),
         ),
         docstore=docstore,
+        llm=(
+            create_chatopenai_model(model_type=llm, api_key=llm_api_key)
+            if llm
+            else None
+        ),
     )
 
     retrieval.add_documents(document_loader.load())

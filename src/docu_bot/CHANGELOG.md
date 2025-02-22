@@ -2,6 +2,14 @@
 
 Changelog for `Docu-Bot` project, documenting all released changes made to the project.
 
+## [2.2.2] - 2025-02-22
+### Added
+- NER and Theme Retrieval
+- Added result visualization
+- Timing for generating answers
+### Fixed
+- Fixed Typing hints
+
 ## [2.2.1] - 2025-02-21
 ### Changed
 - Some optimization of prompts

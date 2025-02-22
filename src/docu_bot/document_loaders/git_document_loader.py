@@ -57,7 +57,7 @@ class GitDocumentLoader(BaseLoader):
                 "Repo path must be a git repository or a path to a git repository."
             )
 
-    def _get_save_path_if_cached(self):
+    def _get_save_path_if_cached(self) -> Optional[str]:
         if (
             os.path.join(self.repo_path, self.branch)
             in self.loaded_repositories_and_files._json_data
@@ -67,7 +67,7 @@ class GitDocumentLoader(BaseLoader):
             ]
         return None
 
-    def _create_save_path(self, save_path, cache_dir, repo_path, branch):
+    def _create_save_path(self, save_path, cache_dir, repo_path, branch) -> str:
         if save_path:
             return save_path
         return os.path.abspath(

@@ -3,6 +3,8 @@ import os
 import git
 import logging
 
+from typing import List, Optional
+
 PERMITED_FILE_EXTENSIONS = [
     # ".txt",
     ".pdf",
@@ -45,19 +47,19 @@ class LoadedRepositoriesAndFiles:
         with open(self._json_file, "w") as f:
             json.dump(self._json_data, f)
 
-    def get_cached_repositories(self):
+    def get_cached_repositories(self) -> List[str]:
         return [
             os.path.dirname(repo) for repo in self._json_data.keys() if ".git" in repo
         ]
 
-    def get_cached_repo_branches_short(self, repo):
+    def get_cached_repo_branches_short(self, repo) -> List[str]:
         return [
             os.path.basename(cache_repo)
             for cache_repo in self._json_data.keys()
             if repo in cache_repo
         ]
 
-    def get_cached_repo_branches(self, repo):
+    def get_cached_repo_branches(self, repo) -> List[str]:
         return [
             os.path.join(
                 os.path.basename(os.path.dirname(cache_repo)),
@@ -67,11 +69,11 @@ class LoadedRepositoriesAndFiles:
             if repo in cache_repo
         ]
 
-    def get_cached_files(self):
+    def get_cached_files(self) -> List[str]:
         return [repo for repo in self._json_data.keys() if ".git" not in repo]
 
 
-def get_file_link(repo_path_or_key, file_path, save_path):
+def get_file_link(repo_path_or_key, file_path, save_path) -> Optional[str]:
     if repo_path_or_key.endswith(".git"):
         branch = "master"
     else:
@@ -89,7 +91,7 @@ def get_file_link(repo_path_or_key, file_path, save_path):
     return f"{repo_path_or_key}/blob/{branch}/{relative_path}"
 
 
-def get_available_branches(repo):
+def get_available_branches(repo) -> List[str]:
     # Check if proper git repo format
     if not repo.endswith(".git"):
         return []

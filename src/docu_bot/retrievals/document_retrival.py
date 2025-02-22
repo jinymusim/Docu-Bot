@@ -1,10 +1,15 @@
 import uuid
+import asyncio
+import logging
 from typing import Dict, Optional, List
 from collections import defaultdict
-
+from langchain_openai import ChatOpenAI
 from langchain.retrievers import MultiVectorRetriever
 from langchain_core.documents import Document, BaseDocumentTransformer
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
+from ragas.llms import LangchainLLMWrapper
+from ragas.testset.graph import Node
+from ragas.testset.transforms.extractors.llm_based import NERExtractor, ThemesExtractor
 
 
 class DocumentRetrieval(MultiVectorRetriever):
@@ -12,32 +17,34 @@ class DocumentRetrieval(MultiVectorRetriever):
     parent_splitters: Dict[str, BaseDocumentTransformer] = {
         ".md": RecursiveCharacterTextSplitter.from_language(
             Language.MARKDOWN,
-            chunk_size=1500,
+            chunk_size=2000,
             chunk_overlap=0,
             length_function=len,
         ),
         ".rst": RecursiveCharacterTextSplitter.from_language(
-            Language.RST, chunk_size=1500, chunk_overlap=0, length_function=len
+            Language.RST, chunk_size=2000, chunk_overlap=0, length_function=len
         ),
         ".pdf": RecursiveCharacterTextSplitter(
-            chunk_size=1500, chunk_overlap=0, length_function=len
+            chunk_size=2000, chunk_overlap=0, length_function=len
         ),
     }
 
     child_splitters: Dict[str, BaseDocumentTransformer] = {
         ".md": RecursiveCharacterTextSplitter.from_language(
             Language.MARKDOWN,
-            chunk_size=300,
-            chunk_overlap=100,
+            chunk_size=500,
+            chunk_overlap=150,
             length_function=len,
         ),
         ".rst": RecursiveCharacterTextSplitter.from_language(
-            Language.RST, chunk_size=300, chunk_overlap=100, length_function=len
+            Language.RST, chunk_size=500, chunk_overlap=150, length_function=len
         ),
         ".pdf": RecursiveCharacterTextSplitter(
-            chunk_size=300, chunk_overlap=100, length_function=len
+            chunk_size=500, chunk_overlap=150, length_function=len
         ),
     }
+
+    llm: Optional[ChatOpenAI]
 
     def add_documents(
         self,
@@ -46,6 +53,14 @@ class DocumentRetrieval(MultiVectorRetriever):
         add_to_docstore: bool = True,
         chunk_size: int = 256,
     ):
+        extractors = (
+            [
+                NERExtractor(llm=LangchainLLMWrapper(self.llm)),
+                ThemesExtractor(llm=LangchainLLMWrapper(self.llm)),
+            ]
+            if self.llm
+            else []
+        )
         for ending, text_splitter in self.parent_splitters.items():
             proper_filetype_docs = [
                 doc for doc in documents if doc.metadata["ItemId"].endswith(ending)
@@ -71,6 +86,25 @@ class DocumentRetrieval(MultiVectorRetriever):
                 ]
                 for document in split_documents:
                     document.metadata[self.id_key] = id
+                    for extractor in extractors:
+                        try:
+                            (
+                                _,
+                                extraxted_entities,
+                            ) = asyncio.get_event_loop().run_until_complete(
+                                extractor.extract(
+                                    Node(
+                                        properties={
+                                            "page_content": document.page_content
+                                        }
+                                    )
+                                )
+                            )
+                            if extraxted_entities:
+                                for entity in extraxted_entities:
+                                    document.metadata[entity] = True
+                        except Exception as e:
+                            logging.warning(f"Failed to extract entities: {e}")
                     docs.append(document)
 
             for i in range(0, len(docs), chunk_size):
@@ -84,7 +118,7 @@ class DocumentRetrieval(MultiVectorRetriever):
         self.docstore.save()
 
     def _get_relevant_documents(self, query, *, run_manager) -> List[Document]:
-        min_score = self.search_kwargs.get("min_score", 0.5)
+        min_score = self.search_kwargs.get("min_score", 0.0)
         results = self.vectorstore.similarity_search_with_score(
             query, k=self.search_kwargs.get("k", 5)
         )

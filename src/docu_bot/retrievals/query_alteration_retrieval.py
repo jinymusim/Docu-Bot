@@ -15,7 +15,7 @@ class QueryAlterationDocumentRetrieval(DocumentRetrieval):
 
     def _get_relevant_documents(self, query, *, run_manager) -> List[Document]:
 
-        llm = self.llm.bind(stop=["query"])
+        llm = self.llm.bind(stop=["query"], max_tokens=50)
 
         template = ChatPromptTemplate.from_messages(
             [
@@ -23,7 +23,7 @@ class QueryAlterationDocumentRetrieval(DocumentRetrieval):
             ]
         )
         num_custom_queires = self.search_kwargs.get("num_custom_queires", 5)
-        min_score = self.search_kwargs.get("min_score", 0.5)
+        min_score = self.search_kwargs.get("min_score", 0.0)
 
         queries = []
         for _ in range(num_custom_queires):
@@ -45,9 +45,9 @@ class QueryAlterationDocumentRetrieval(DocumentRetrieval):
                     ids_doc[doc_id].append(doc)
                     ids_score[doc_id].append(score)
 
-        top_ids = sorted(ids_score, key=lambda x: sum(ids_score[x]), reverse=True)[
-            : self.search_kwargs.get("k", 5)
-        ]
+        top_ids = sorted(
+            ids_score, key=lambda x: sum(ids_score[x]) / len(ids_score[x]), reverse=True
+        )[: self.search_kwargs.get("k", 5)]
 
         full_docs = []
         for doc_id, docs in ids_doc.items():
