@@ -30,6 +30,7 @@ setup(
         "rapidfuzz==3.12.1",
         "plotly==6.0.0",
         "nbformat==5.10.4",
+        "GitPython==3.1.43",
     ],
     scripts=[
         "scripts/web_rag.py",

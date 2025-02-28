@@ -15,6 +15,9 @@ from docu_bot.retrievals.empty_retrieval import EmptyRetrieval
 from docu_bot.retrievals.document_retrival import DocumentRetrieval
 from docu_bot.retrievals.generative_retrieval import GenerativeDocumentRetrieval
 from docu_bot.retrievals.rerank_retrieval import RerankDocumentRetrieval
+from docu_bot.retrievals.ner_retireval import NerRetrieval
+from docu_bot.retrievals.theme_retrieval import ThemeRetrieval
+from docu_bot.retrievals.keyphrase_retrieval import KeyphraseRetrieval
 from docu_bot.retrievals.query_alteration_retrieval import (
     QueryAlterationDocumentRetrieval,
 )
@@ -22,16 +25,7 @@ from docu_bot.retrievals.context_query_alteration_retrieval import (
     ContextQueryAlterationDocumentRetrieval,
 )
 
-from docu_bot.utils import create_chatopenai_model, format_docs
-
-
-class RETRIEVAL_TYPES:
-    EMPTY = "empty"
-    DEFAULT = "default"
-    GENERATIVE = "generative"
-    RERANK = "rerank"
-    QUERY_ALTERATION = "query_alteration"
-    CONTEXT_QUERY_ALTERATION = "context_query_alteration"
+from docu_bot.utils import create_chatopenai_model, format_docs, RETRIEVAL_TYPES
 
 
 def answer_question(
@@ -130,6 +124,27 @@ def prepare_retriever(
         )
     elif retrieval_type == RETRIEVAL_TYPES.RERANK:
         return RerankDocumentRetrieval(
+            vectorstore=vectorstore,
+            docstore=docstore,
+            llm=llm,
+            search_kwargs=search_kwargs,
+        )
+    elif retrieval_type == RETRIEVAL_TYPES.NER_RETRIEVAL:
+        return NerRetrieval(
+            vectorstore=vectorstore,
+            docstore=docstore,
+            llm=llm,
+            search_kwargs=search_kwargs,
+        )
+    elif retrieval_type == RETRIEVAL_TYPES.THEME_RETRIEVAL:
+        return ThemeRetrieval(
+            vectorstore=vectorstore,
+            docstore=docstore,
+            llm=llm,
+            search_kwargs=search_kwargs,
+        )
+    elif retrieval_type == RETRIEVAL_TYPES.KEYPHRASE_RETRIEVAL:
+        return KeyphraseRetrieval(
             vectorstore=vectorstore,
             docstore=docstore,
             llm=llm,

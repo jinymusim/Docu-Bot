@@ -28,7 +28,7 @@ relevant:'''
 
 QUERY_PROMPT = """You are an assistant responsible for rewriting the query to improve the search results. 
 For given query, you need to alter the query to improve the search results. In general the query should be more specific or more general.
-The altered query should be of similar length to the original query.
+The altered query needs to be question of lenght max 30 tokens.
 
 query: What protocols are supported?
 altered query: What are the file protocols supported by the application?
@@ -38,14 +38,14 @@ altered query: """
 
 CONTEXT_QUERY_PROMPT = """You are an assistant responsible for rewriting the query to improve the search results.
 You are given a context to the original query and you need to output am altered query that will improve the search results.
-In general the query should be more specific or more general. The altered query should be of similar length to the original query.
+In general the query should be more specific or more general. The altered query needs to be question of lenght max 30 tokens.
 
 query: {query}
 context: {context}
 altered query: """
 
-GENERATE_DOCUMENT_PROMPT = """You are an Assistant responsible for generating a document based on the provided context.
-For a given input, you need to output a document that is relevant to the context.
+GENERATE_DOCUMENT_PROMPT = """You are an Assistant that for given query generates context of how could retrieved document look like.
+The generated context must be max 150 tokens long. It is important for the context to be coherent and relevant to the query.
 
 query: {query}
 context:"""

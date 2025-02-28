@@ -1,7 +1,20 @@
+import re
 from typing import List
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from docu_bot.constants import MODEL_TYPES
+
+
+class RETRIEVAL_TYPES:
+    EMPTY = "empty"
+    DEFAULT = "default"
+    GENERATIVE = "generative"
+    RERANK = "rerank"
+    QUERY_ALTERATION = "query_alteration"
+    CONTEXT_QUERY_ALTERATION = "context_query_alteration"
+    NER_RETRIEVAL = "ner_retrieval"
+    THEME_RETRIEVAL = "theme_retrieval"
+    KEYPHRASE_RETRIEVAL = "keyphrase_retrieval"
 
 
 def create_chatopenai_model(
@@ -37,5 +50,13 @@ def create_openai_embeddings(
 
 def format_docs(docs: List[Document]) -> str:
     return "\n\n".join(
-        [f"{i+1}. Document: \n" + d.page_content for i, d in enumerate(docs)]
+        [
+            f"{i+1}. Document: \n"
+            + re.sub(
+                r"[\t\v]",
+                "",
+                re.sub(r"\n+", "\n", re.sub(r"[^\w\s!\.\?,]", "", d.page_content)),
+            ).strip()
+            for i, d in enumerate(docs)
+        ]
     )

@@ -18,11 +18,11 @@ from docu_bot.stores.utils import (
 from docu_bot.stores.docstore import DocumentStore
 from docu_bot.constants import PROMPTS, MODEL_TYPES
 from docu_bot.chat.answer_openai import (
-    RETRIEVAL_TYPES,
     prepare_retriever,
     get_documents,
     stream_rag,
 )
+from docu_bot.utils import RETRIEVAL_TYPES
 
 
 def main(args):
@@ -707,6 +707,9 @@ def run():
             RETRIEVAL_TYPES.CONTEXT_QUERY_ALTERATION,
             RETRIEVAL_TYPES.QUERY_ALTERATION,
             RETRIEVAL_TYPES.RERANK,
+            RETRIEVAL_TYPES.NER_RETRIEVAL,
+            RETRIEVAL_TYPES.THEME_RETRIEVAL,
+            RETRIEVAL_TYPES.KEYPHRASE_RETRIEVAL,
         },
     )
     parser.add_argument(

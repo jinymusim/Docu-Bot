@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections import defaultdict
 from typing import List
 from docu_bot.retrievals.document_retrival import DocumentRetrieval
@@ -21,14 +22,24 @@ class ThemeRetrieval(DocumentRetrieval):
 
         min_score = self.search_kwargs.get("min_score", 0.0)
 
-        extractor = ThemesExtractor(llm=LangchainLLMWrapper(self.llm))
-        _, entities = asyncio.get_event_loop().run_until_complete(
-            extractor.extract(Node(properties={"page_content": query}))
+        extractor = ThemesExtractor(
+            llm=LangchainLLMWrapper(self.llm),
+            max_num_themes=self.search_kwargs.get("max_num_themes", 5),
         )
-        new_query = " ".join(entities) if entities else query
+        try:
+            _, entities = asyncio.get_event_loop().run_until_complete(
+                extractor.extract(Node(properties={"page_content": query}))
+            )
+            new_query = " ".join(entities) if entities else query
+        except Exception as e:
+            logging.warning(f"Failed to extract themes: {e}")
+            new_query = query
 
         results = self.vectorstore.similarity_search_with_score(
             new_query,
+            k=self.search_kwargs.get("k", 5),
+        ) + self.vectorstore.similarity_search_with_score(
+            query,
             k=self.search_kwargs.get("k", 5),
         )
 

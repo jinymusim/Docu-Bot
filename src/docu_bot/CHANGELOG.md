@@ -2,6 +2,16 @@
 
 Changelog for `Docu-Bot` project, documenting all released changes made to the project.
 
+## [2.2.3] - 2025-02-28
+### Added
+- Keyphrase Retrieval
+- Added More results
+### Fixed
+- Added fallbacks when extraction fails
+- Unaccounted packages
+- Added fallback for git
+
+
 ## [2.2.2] - 2025-02-22
 ### Added
 - NER and Theme Retrieval

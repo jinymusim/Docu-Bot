@@ -44,7 +44,7 @@ class DocumentRetrieval(MultiVectorRetriever):
         ),
     }
 
-    llm: Optional[ChatOpenAI]
+    llm: Optional[ChatOpenAI] = None
 
     def add_documents(
         self,

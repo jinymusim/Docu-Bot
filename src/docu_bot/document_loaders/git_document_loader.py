@@ -1,6 +1,7 @@
 import os
 import git
 import pypdf
+import logging
 from pathlib import Path
 from typing import Optional, Iterator
 from langchain_core.document_loaders import BaseLoader
@@ -42,13 +43,17 @@ class GitDocumentLoader(BaseLoader):
             pass
         elif self.repo_path.endswith(".git"):
             os.makedirs(self.save_path, exist_ok=True)
-            git.Repo.clone_from(
-                self.repo_path,
-                self.save_path,
-                branch=self.branch,
-                allow_unsafe_protocols=True,
-                allow_unsafe_options=True,
-            )
+            try:
+                git.Repo.clone_from(
+                    self.repo_path,
+                    self.save_path,
+                    branch=self.branch,
+                )
+            except git.exc.GitCommandError as e:
+                logging.warning(
+                    f"Error while cloning repository {self.repo_path}: {e}. Trying to clone through os.system."
+                )
+                os.system(f"git clone {self.repo_path} {self.save_path}")
             self.loaded_repositories_and_files.add_directory(
                 os.path.join(self.repo_path, self.branch), self.save_path
             )

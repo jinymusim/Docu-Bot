@@ -15,7 +15,7 @@ class ContextQueryAlterationDocumentRetrieval(QueryAlterationDocumentRetrieval):
 
     def _get_relevant_documents(self, query, *, run_manager) -> List[Document]:
 
-        llm = self.llm.bind(stop=["query"], max_tokens=50)
+        llm = self.llm.bind(stop=["query"], max_tokens=30)
 
         template = ChatPromptTemplate.from_messages(
             [
