@@ -2,6 +2,12 @@
 
 Changelog for `Docu-Bot` project, documenting all released changes made to the project.
 
+## [2.2.4] - 2025-03-11
+### Changed
+- Refactored the code for better maintainability
+### Added
+- Component tests
+
 ## [2.2.3] - 2025-02-28
 ### Added
 - Keyphrase Retrieval
@@ -10,7 +16,6 @@ Changelog for `Docu-Bot` project, documenting all released changes made to the p
 - Added fallbacks when extraction fails
 - Unaccounted packages
 - Added fallback for git
-
 
 ## [2.2.2] - 2025-02-22
 ### Added

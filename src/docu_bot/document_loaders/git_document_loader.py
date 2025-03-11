@@ -81,6 +81,37 @@ class GitDocumentLoader(BaseLoader):
             )
         )
 
+    def __load_pdf(self, file_path: Path) -> Iterator[Document]:
+        reader = pypdf.PdfReader(file_path)
+        for i, page in enumerate(reader.pages):
+            yield Document(
+                page_content=page.extract_text(),
+                metadata={
+                    "ItemId": get_file_link(
+                        os.path.join(self.repo_path, self.branch),
+                        file_path,
+                        self.save_path,
+                    ),
+                    "source": "git",
+                    "page_number": i + 1,
+                },
+            )
+
+    def __load_generic_textfile(self, file_path: Path) -> Iterator[Document]:
+        with open(file_path, "r", encoding="utf-8") as f:
+            text = f.read()
+        yield Document(
+            page_content=text,
+            metadata={
+                "ItemId": get_file_link(
+                    os.path.join(self.repo_path, self.branch),
+                    file_path,
+                    self.save_path,
+                ),
+                "source": "git",
+            },
+        )
+
     def lazy_load(self) -> Iterator[Document]:
         # Get only files
         files_path = Path(self.save_path).rglob("*.*")
@@ -91,31 +122,6 @@ class GitDocumentLoader(BaseLoader):
                 and file_path.suffix in PERMITED_FILE_EXTENSIONS
             ):
                 if file_path.suffix == ".pdf":
-                    reader = pypdf.PdfReader(file_path)
-                    for i, page in enumerate(reader.pages):
-                        yield Document(
-                            page_content=page.extract_text(),
-                            metadata={
-                                "ItemId": get_file_link(
-                                    os.path.join(self.repo_path, self.branch),
-                                    file_path,
-                                    self.save_path,
-                                ),
-                                "source": "git",
-                                "page_number": i + 1,
-                            },
-                        )
+                    yield from self.__load_pdf(file_path)
                 else:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        text = f.read()
-                    yield Document(
-                        page_content=text,
-                        metadata={
-                            "ItemId": get_file_link(
-                                os.path.join(self.repo_path, self.branch),
-                                file_path,
-                                self.save_path,
-                            ),
-                            "source": "git",
-                        },
-                    )
+                    yield from self.__load_generic_textfile(file_path)

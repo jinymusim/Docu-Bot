@@ -49,15 +49,4 @@ class QueryAlterationDocumentRetrieval(DocumentRetrieval):
             ids_score, key=lambda x: sum(ids_score[x]) / len(ids_score[x]), reverse=True
         )[: self.search_kwargs.get("k", 5)]
 
-        full_docs = []
-        for doc_id, docs in ids_doc.items():
-            if doc_id not in top_ids:
-                continue
-            docstore_docs = self.docstore.mget([doc_id])
-            if docstore_docs:
-                doc = docstore_docs[0]
-                if doc:
-                    doc.metadata["sub_docs"] = docs
-                    full_docs.append(doc)
-
-        return full_docs
+        return self.__get_ful_documents_from_sub_docs(ids_doc, top_ids)

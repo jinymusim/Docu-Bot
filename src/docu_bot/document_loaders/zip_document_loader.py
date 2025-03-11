@@ -53,6 +53,26 @@ class ZipDocumentLoader(BaseLoader):
 
         self.loaded_repositories_and_files.add_directory(self.filename, self.save_path)
 
+    def __load_pdf(self, file_path: Path) -> Iterator[Document]:
+        reader = pypdf.PdfReader(file_path)
+        for i, page in enumerate(reader.pages):
+            yield Document(
+                page_content=page.extract_text(),
+                metadata={
+                    "ItemId": str(file_path),
+                    "source": "user",
+                    "page_number": i + 1,
+                },
+            )
+
+    def __load_generic_textfile(self, file_path: Path) -> Iterator[Document]:
+        with open(file_path, "r", encoding="utf-8") as f:
+            text = f.read()
+        yield Document(
+            page_content=text,
+            metadata={"ItemId": str(file_path), "source": "user"},
+        )
+
     def lazy_load(self) -> Iterator[Document]:
         # Get only files
         files_path = Path(self.save_path).rglob("*.*")
@@ -63,20 +83,6 @@ class ZipDocumentLoader(BaseLoader):
                 and file_path.suffix in PERMITED_FILE_EXTENSIONS
             ):
                 if file_path.suffix == ".pdf":
-                    reader = pypdf.PdfReader(file_path)
-                    for i, page in enumerate(reader.pages):
-                        yield Document(
-                            page_content=page.extract_text(),
-                            metadata={
-                                "ItemId": str(file_path),
-                                "source": "user",
-                                "page_number": i + 1,
-                            },
-                        )
+                    yield from self.__load_pdf(file_path)
                 else:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        text = f.read()
-                    yield Document(
-                        page_content=text,
-                        metadata={"ItemId": str(file_path), "source": "user"},
-                    )
+                    yield from self.__load_generic_textfile(file_path)
