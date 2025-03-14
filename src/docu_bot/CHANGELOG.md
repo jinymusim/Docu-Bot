@@ -2,6 +2,10 @@
 
 Changelog for `Docu-Bot` project, documenting all released changes made to the project.
 
+## [2.2.5] - 2025-03-11
+### Fixed
+- Script Path
+
 ## [2.2.4] - 2025-03-11
 ### Changed
 - Refactored the code for better maintainability

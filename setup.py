@@ -33,6 +33,6 @@ setup(
         "GitPython==3.1.43",
     ],
     scripts=[
-        "scripts/web_rag.py",
+        "scripts/run_web_rag.py",
     ],
 )
