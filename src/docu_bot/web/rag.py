@@ -681,6 +681,15 @@ def main(args):
             main_page_boxes,
         )
 
+    import uvicorn
+
+    uvicorn.config.LOOP_SETUPS = {
+        "none": None,
+        "auto": "uvicorn.loops.asyncio:asyncio_setup",
+        "asyncio": "uvicorn.loops.asyncio:asyncio_setup",
+        "uvloop": "uvicorn.loops.uvloop:uvloop_setup",
+    }
+
     with redirect_stdout(sys.stderr):
         demo.launch(share=False, server_name="0.0.0.0", server_port=args.port)
 
