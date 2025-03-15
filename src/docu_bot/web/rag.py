@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
+import asyncio
 
 import argparse
 import gradio as gr
@@ -681,12 +682,14 @@ def main(args):
         )
 
     with redirect_stdout(sys.stderr):
-        app, local, shared = demo.launch(
-            share=False, server_name="0.0.0.0", server_port=args.port
-        )
+        demo.launch(share=False, server_name="0.0.0.0", server_port=args.port)
 
 
 def run():
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -720,4 +723,4 @@ def run():
     )
     args = parser.parse_args([] if "__file__" not in globals() else None)
 
-    main(args)
+    loop.run_until_complete(main(args))
