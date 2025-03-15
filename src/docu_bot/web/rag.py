@@ -732,4 +732,4 @@ def run():
     )
     args = parser.parse_args([] if "__file__" not in globals() else None)
 
-    loop.run_until_complete(main(args))
+    main(args)
