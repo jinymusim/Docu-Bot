@@ -1,5 +1,3 @@
-import asyncio
-import logging
 from collections import defaultdict
 from typing import List
 from docu_bot.retrievals.document_retrival import DocumentRetrieval

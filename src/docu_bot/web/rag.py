@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
+import asyncio
 
 import argparse
 import gradio as gr
@@ -680,13 +681,24 @@ def main(args):
             main_page_boxes,
         )
 
+    import uvicorn
+
+    uvicorn.config.LOOP_SETUPS = {
+        "none": None,
+        "auto": "uvicorn.loops.asyncio:asyncio_setup",
+        "asyncio": "uvicorn.loops.asyncio:asyncio_setup",
+        "uvloop": "uvicorn.loops.uvloop:uvloop_setup",
+    }
+
     with redirect_stdout(sys.stderr):
-        app, local, shared = demo.launch(
-            share=False, server_name="0.0.0.0", server_port=args.port
-        )
+        demo.launch(share=False, server_name="0.0.0.0", server_port=args.port)
 
 
 def run():
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
