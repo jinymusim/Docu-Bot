@@ -2,6 +2,10 @@
 
 Changelog for `Docu-Bot` project, documenting all released changes made to the project.
 
+## [2.2.6] - 2025-03-15
+### Fixed
+- Linux compatibility (Issue #10)
+
 ## [2.2.5] - 2025-03-11
 ### Fixed
 - Script Path
