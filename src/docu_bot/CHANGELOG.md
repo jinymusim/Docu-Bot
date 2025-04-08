@@ -2,6 +2,10 @@
 
 Changelog for `Docu-Bot` project, documenting all released changes made to the project.
 
+## [2.2.6] - 2025-04-08
+### Added
+- Dockerfile for easy deployment
+
 ## [2.2.6] - 2025-03-15
 ### Fixed
 - Linux compatibility (Issue #10)
